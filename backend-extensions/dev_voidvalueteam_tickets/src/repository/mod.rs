@@ -57,6 +57,22 @@ pub async fn list_departments(
     .await?)
 }
 
+pub async fn list_agents(state: &State) -> anyhow::Result<Vec<SupportAgent>> {
+    Ok(sqlx::query_as::<_, SupportAgent>(
+        r#"
+        SELECT u.uuid,u.username
+        FROM users u
+        LEFT JOIN roles r ON r.uuid=u.role_uuid
+        WHERE NOT u.suspended AND NOT u.frozen
+          AND (u.admin OR (r.admin_permissions IS NOT NULL AND 'support.read'=ANY(r.admin_permissions)))
+        ORDER BY u.username
+        LIMIT 100
+        "#,
+    )
+    .fetch_all(state.database.read())
+    .await?)
+}
+
 pub async fn create_ticket(
     state: &State,
     user_uuid: Uuid,
@@ -563,6 +579,21 @@ pub async fn assign(
         .fetch_optional(&mut *tx)
         .await?
         .ok_or_else(|| anyhow::anyhow!("ticket not found"))?;
+    if let Some(staff) = staff_uuid {
+        let eligible: bool = sqlx::query_scalar(
+            r#"SELECT EXISTS(
+              SELECT 1 FROM users u LEFT JOIN roles r ON r.uuid=u.role_uuid
+              WHERE u.uuid=$1 AND NOT u.suspended AND NOT u.frozen
+                AND (u.admin OR (r.admin_permissions IS NOT NULL AND 'support.read'=ANY(r.admin_permissions)))
+            )"#,
+        )
+        .bind(staff)
+        .fetch_one(&mut *tx)
+        .await?;
+        if !eligible {
+            anyhow::bail!("staff member is not eligible");
+        }
+    }
     sqlx::query("UPDATE dev_voidvalueteam_tickets_assignments SET ended_at=now() WHERE ticket_uuid=$1 AND ended_at IS NULL").bind(ticket_uuid).execute(&mut *tx).await?;
     if let Some(staff) = staff_uuid {
         sqlx::query("INSERT INTO dev_voidvalueteam_tickets_assignments(uuid,ticket_uuid,staff_uuid,assigned_by_uuid) VALUES($1,$2,$3,$4)").bind(Uuid::new_v4()).bind(ticket_uuid).bind(staff).bind(actor_uuid).execute(&mut *tx).await?;

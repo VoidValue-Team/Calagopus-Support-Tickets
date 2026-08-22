@@ -131,6 +131,12 @@ pub struct TicketAttachment {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, FromRow, Serialize, ToSchema)]
+pub struct SupportAgent {
+    pub uuid: Uuid,
+    pub username: String,
+}
+
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub struct TicketDetail {
     #[serde(flatten)]

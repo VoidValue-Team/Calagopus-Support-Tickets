@@ -14,7 +14,7 @@
     "messageTypes":{"customer":"Cliente","staff":"Equipo de soporte","internal_note":"Nota interna","system":"Sistema"},
     "categories":{"open":"Abiertos","closed":"Cerrados","all":"Todos"},
     "statistics":{"open":"Tickets abiertos","awaitingStaff":"Esperando al equipo","urgent":"Urgentes","sla":"SLA incumplido"},
-    "notices":{"ticketCreated":"Ticket creado.","replySent":"Respuesta enviada.","statusUpdated":"Estado del ticket actualizado.","ticketDeleted":"Ticket eliminado permanentemente.","ticketCreatedWithoutAttachments":"El ticket se creó, pero no se pudieron adjuntar sus archivos.","replySentWithoutAttachments":"La respuesta se envió, pero no se pudieron adjuntar sus archivos."},
+    "notices":{"ticketCreated":"Ticket creado.","replySent":"Respuesta enviada.","statusUpdated":"Estado del ticket actualizado.","ticketDeleted":"Ticket eliminado permanentemente.","ticketCreatedWithoutAttachments":"El ticket se creó, pero no se pudieron adjuntar sus archivos.","replySentWithoutAttachments":"La respuesta se envió, pero no se pudieron adjuntar sus archivos.","assignmentUpdated":"Agente asignado actualizado."},
     "errors":{"ticketUnavailable":"No se pudo cargar el ticket o ya no está disponible.","createdMessageUnavailable":"No se pudo identificar el mensaje para adjuntar los archivos."},
     "warnings":{"deleteTicket":"Se eliminará permanentemente el ticket {code}, toda su conversación y sus archivos. Esta acción no se puede deshacer."},
     "empty":"No se encontraron tickets de soporte.",

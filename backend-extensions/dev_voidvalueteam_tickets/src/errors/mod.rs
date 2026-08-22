@@ -15,7 +15,8 @@ pub fn api_error(error: anyhow::Error) -> ApiResponseResult {
         | "attachment is too large"
         | "no attachments provided"
         | "message uuid is missing"
-        | "message not found" => StatusCode::BAD_REQUEST,
+        | "message not found"
+        | "staff member is not eligible" => StatusCode::BAD_REQUEST,
         _ => {
             tracing::error!(error = ?error, "support ticket operation failed");
             StatusCode::INTERNAL_SERVER_ERROR

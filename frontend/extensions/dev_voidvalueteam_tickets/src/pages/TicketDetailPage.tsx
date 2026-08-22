@@ -16,8 +16,10 @@ import Spinner from '@/elements/Spinner.tsx';
 import { useAdminCan } from '@/plugins/usePermissions.ts';
 import { useResource } from '@/plugins/useResource.ts';
 import { useToast } from '@/providers/ToastProvider.tsx';
+import assignTicket from '../api/tickets/assignTicket.ts';
 import { downloadAttachment, uploadAttachments } from '../api/tickets/attachments.ts';
 import deleteTicket from '../api/tickets/deleteTicket.ts';
+import getAgents from '../api/tickets/getAgents.ts';
 import getTicket from '../api/tickets/getTicket.ts';
 import type { TicketScope } from '../api/tickets/getTickets.ts';
 import replyTicket from '../api/tickets/replyTicket.ts';
@@ -56,12 +58,19 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
   const canReply = useAdminCan('support.reply');
   const canInternalNote = useAdminCan('support.internal-note');
   const canUpdateStatus = useAdminCan('support.update-status');
+  const canAssign = useAdminCan('support.assign');
   const canAttachments = useAdminCan('support.attachments');
   const canDelete = useAdminCan('support.delete');
   const resource = useResource({
     queryKey: ['extensions', 'dev.voidvalueteam.tickets', 'ticket', scope, ticket],
     queryFn: () => getTicket(scope, ticket),
     enabled: Boolean(ticket),
+  });
+  const agents = useResource({
+    queryKey: ['extensions', 'dev.voidvalueteam.tickets', 'agents'],
+    queryFn: getAgents,
+    enabled: scope === 'admin' && canAssign,
+    silent: true,
   });
   const detail = resource.data;
 
@@ -182,7 +191,28 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
             <Text size='xs' c='dimmed'>
               {t('fields.assignedTo', {})}
             </Text>
-            <Text mt='xs'>{detail.assignedStaffName ?? t('fields.unassigned', {})}</Text>
+            {scope === 'admin' && canAssign ? (
+              <Select
+                mt='xs'
+                searchable
+                clearable
+                placeholder={t('fields.unassigned', {})}
+                data={[
+                  ...(detail.assignedStaffUuid && !agents.data?.some((agent) => agent.uuid === detail.assignedStaffUuid)
+                    ? [{ value: detail.assignedStaffUuid, label: detail.assignedStaffName ?? detail.assignedStaffUuid }]
+                    : []),
+                  ...(agents.data ?? []).map((agent) => ({ value: agent.uuid, label: agent.username })),
+                ]}
+                value={detail.assignedStaffUuid}
+                loading={agents.loading}
+                disabled={submitting}
+                onChange={async (staffUuid) => {
+                  await mutate(() => assignTicket(ticket, staffUuid), t('notices.assignmentUpdated', {}));
+                }}
+              />
+            ) : (
+              <Text mt='xs'>{detail.assignedStaffName ?? t('fields.unassigned', {})}</Text>
+            )}
           </Card>
         </SimpleGrid>
 

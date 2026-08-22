@@ -1,6 +1,6 @@
 use crate::{
     errors::api_error,
-    models::{ListQuery, Page, TicketSummary},
+    models::{ListQuery, Page, SupportAgent, TicketSummary},
     repository::{self, TicketScope},
 };
 use axum::extract::Query;
@@ -17,6 +17,10 @@ pub mod _ticket_;
 struct Response {
     tickets: Page<TicketSummary>,
 }
+#[derive(Serialize, ToSchema)]
+struct AgentsResponse {
+    agents: Vec<SupportAgent>,
+}
 #[utoipa::path(get,path="/",params(ListQuery),responses((status=OK,body=inline(Response))))]
 async fn get(
     state: GetState,
@@ -29,9 +33,17 @@ async fn get(
         Err(e) => api_error(e),
     }
 }
+async fn agents(state: GetState, permissions: GetPermissionManager) -> ApiResponseResult {
+    permissions.has_admin_permission("support.assign")?;
+    match repository::list_agents(&state).await {
+        Ok(agents) => ApiResponse::new_serialized(AgentsResponse { agents }).ok(),
+        Err(error) => api_error(error),
+    }
+}
 pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
         .routes(routes!(get))
+        .route("/agents", axum::routing::get(agents))
         .nest("/{ticket}", _ticket_::router(state))
         .with_state(state.clone())
 }

@@ -51,6 +51,10 @@ export const attachmentSchema = z.object({
   sha256: z.string().nullable(),
   createdAt: z.coerce.date(),
 });
+export const supportAgentSchema = z.object({
+  uuid: z.string().uuid(),
+  username: z.string(),
+});
 export const ticketDetailSchema = ticketSummarySchema.extend({
   messages: z.array(messageSchema),
   attachments: z.array(attachmentSchema),
@@ -80,9 +84,11 @@ export const replyTicketSchema = z.object({
   internalNote: z.boolean().optional(),
 });
 export const updateTicketStatusSchema = z.object({ status: ticketStatusSchema });
+export const assignTicketSchema = z.object({ staffUuid: z.string().uuid().nullable() });
 export type TicketSummary = z.infer<typeof ticketSummarySchema>;
 export type TicketDetail = z.infer<typeof ticketDetailSchema>;
 export type TicketAttachment = z.infer<typeof attachmentSchema>;
+export type SupportAgent = z.infer<typeof supportAgentSchema>;
 export type Department = z.infer<typeof departmentSchema>;
 export type CreateTicket = z.infer<typeof createTicketSchema>;
 export type ReplyTicket = z.infer<typeof replyTicketSchema>;

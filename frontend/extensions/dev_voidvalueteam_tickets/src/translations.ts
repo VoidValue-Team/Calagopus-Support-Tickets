@@ -85,6 +85,7 @@ const translations = defineTranslations({
       ticketDeleted: 'Ticket permanently deleted.',
       ticketCreatedWithoutAttachments: 'Ticket created, but its files could not be attached.',
       replySentWithoutAttachments: 'Reply sent, but its files could not be attached.',
+      assignmentUpdated: 'Assigned agent updated.',
     },
     errors: {
       ticketUnavailable: 'The ticket could not be loaded or is no longer available.',
