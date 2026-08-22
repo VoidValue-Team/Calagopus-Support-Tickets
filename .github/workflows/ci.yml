@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout extension
+        uses: actions/checkout@v4
+        with:
+          path: extension
+
+      - name: Checkout Calagopus 1.2.0 baseline
+        uses: actions/checkout@v4
+        with:
+          repository: calagopus/panel
+          ref: febe5303a1d4086199deb77579ab446b64b7880c
+          path: panel
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.0
+          components: rustfmt, clippy
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: panel/frontend/pnpm-lock.yaml
+
+      - name: Add extension to workspace
+        run: |
+          rsync -a extension/backend-extensions/dev_voidvalueteam_tickets/ panel/backend-extensions/dev_voidvalueteam_tickets/
+          rsync -a extension/frontend/extensions/dev_voidvalueteam_tickets/ panel/frontend/extensions/dev_voidvalueteam_tickets/
+          rsync -a extension/database/extension-migrations/dev_voidvalueteam_tickets/ panel/database/extension-migrations/dev_voidvalueteam_tickets/
+
+      - name: Frontend
+        working-directory: panel/frontend
+        run: |
+          pnpm install --frozen-lockfile=false
+          pnpm build:ci
+
+      - name: Rust formatting
+        working-directory: panel
+        run: cargo fmt --check -p dev_voidvalueteam_tickets
+
+      - name: Rust lint
+        working-directory: panel
+        run: cargo clippy -p dev_voidvalueteam_tickets --all-targets -- -D warnings
+
+      - name: Rust tests
+        working-directory: panel
+        run: cargo test -p dev_voidvalueteam_tickets

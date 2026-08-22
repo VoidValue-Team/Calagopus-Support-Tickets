@@ -1,0 +1,14 @@
+{
+  "items": {
+    "ticket": {"zero":"{count} tickets","one":"{count} ticket","two":"{count} tickets","few":"{count} tickets","many":"{count} tickets","other":"{count} tickets"}
+  },
+  "translations": {
+    "nav":{"support":"Soporte"},
+    "pages":{"account":{"title":"Tickets de soporte","subtitle":"Crea y consulta tus conversaciones con soporte."},"server":{"title":"Soporte del servidor","subtitle":"Tickets relacionados con este servidor."},"admin":{"title":"Cola de soporte","subtitle":"Gestiona solicitudes de clientes y niveles de servicio."},"settings":{"title":"Configuración de soporte"}},
+    "actions":{"create":"Crear ticket","submit":"Enviar ticket","open":"Abrir ticket"},
+    "fields":{"subject":"Asunto","message":"Describe el problema","department":"Departamento","priority":"Prioridad"},
+    "columns":{"code":"Código","subject":"Asunto","department":"Departamento","priority":"Prioridad","status":"Estado","updated":"Última respuesta","sla":"SLA"},
+    "empty":"No se encontraron tickets de soporte.",
+    "quickActions":{"category":"Soporte","open":"Abrir soporte","unassigned":"Tickets sin asignar","urgent":"Tickets urgentes"}
+  }
+}
