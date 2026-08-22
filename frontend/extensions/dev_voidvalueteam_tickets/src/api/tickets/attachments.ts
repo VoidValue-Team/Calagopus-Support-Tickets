@@ -10,7 +10,9 @@ export async function uploadAttachments(scope: TicketScope, ticketUuid: string, 
   const payload = new FormData();
   payload.append('message_uuid', messageUuid);
   for (const file of files) payload.append('files', file);
-  const { data } = await axiosInstance.post(`${ticketBase(scope)}/${ticketUuid}/attachments`, payload);
+  const { data } = await axiosInstance.post(`${ticketBase(scope)}/${ticketUuid}/attachments`, payload, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
   return parseFromApi(ticketDetailSchema, data.ticket);
 }
 

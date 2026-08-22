@@ -11,6 +11,7 @@
 - Corrige la selección de servidores para administradores sin servidores propios.
 - Añade categorías de tickets abiertos, cerrados y todos, además de estadísticas de cola.
 - Añade adjuntos privados con límites de tipo, tamaño y cantidad.
+- Corrige la cabecera multipart para que el navegador genere el boundary de cada subida.
 - Añade borrado permanente de tickets para administradores con permiso y confirmación explícita.
 
 ## 1.0.1 - 2026-08-22
