@@ -1,4 +1,4 @@
-import { faArrowLeft, faDownload, faPaperclip, faPaperPlane, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faDownload, faPaperclip, faPaperPlane, faPen, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Badge, FileInput, Group, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useEffect, useState } from 'react';
@@ -16,12 +16,16 @@ import Spinner from '@/elements/Spinner.tsx';
 import { useAdminCan } from '@/plugins/usePermissions.ts';
 import { useResource } from '@/plugins/useResource.ts';
 import { useToast } from '@/providers/ToastProvider.tsx';
+import assignTicket from '../api/tickets/assignTicket.ts';
 import { downloadAttachment, uploadAttachments } from '../api/tickets/attachments.ts';
 import deleteTicket from '../api/tickets/deleteTicket.ts';
+import getAgents from '../api/tickets/getAgents.ts';
+import getPublicSettings from '../api/tickets/getPublicSettings.ts';
 import getTicket from '../api/tickets/getTicket.ts';
 import type { TicketScope } from '../api/tickets/getTickets.ts';
 import replyTicket from '../api/tickets/replyTicket.ts';
 import updateTicketStatus from '../api/tickets/updateTicketStatus.ts';
+import EditTicketModal from '../components/EditTicketModal.tsx';
 import type { TicketStatus } from '../schemas/tickets.ts';
 import { useExtTranslations } from '../translations.ts';
 
@@ -50,18 +54,34 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
   const [internalNote, setInternalNote] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [deleteOpened, setDeleteOpened] = useState(false);
+  const [editOpened, setEditOpened] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<TicketStatus>('open');
   const [submitting, setSubmitting] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const canReply = useAdminCan('support.reply');
   const canInternalNote = useAdminCan('support.internal-note');
   const canUpdateStatus = useAdminCan('support.update-status');
+  const canEdit = useAdminCan('support.edit');
+  const canMoveDepartment = useAdminCan('support.move-department');
+  const canUpdatePriority = useAdminCan('support.update-priority');
+  const canAssign = useAdminCan('support.assign');
   const canAttachments = useAdminCan('support.attachments');
   const canDelete = useAdminCan('support.delete');
   const resource = useResource({
     queryKey: ['extensions', 'dev.voidvalueteam.tickets', 'ticket', scope, ticket],
     queryFn: () => getTicket(scope, ticket),
     enabled: Boolean(ticket),
+  });
+  const agents = useResource({
+    queryKey: ['extensions', 'dev.voidvalueteam.tickets', 'agents'],
+    queryFn: getAgents,
+    enabled: scope === 'admin' && canAssign,
+    silent: true,
+  });
+  const configuration = useResource({
+    queryKey: ['extensions', 'dev.voidvalueteam.tickets', 'public-settings', scope],
+    queryFn: () => getPublicSettings(scope),
+    silent: true,
   });
   const detail = resource.data;
 
@@ -87,6 +107,19 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
 
   const submitReply = async () => {
     if (!message.trim()) return;
+    const attachmentSettings = configuration.data;
+    if (attachmentSettings && files.length > attachmentSettings.attachmentMaxFiles) {
+      addToast(t('errors.tooManyFiles', {}), 'error');
+      return;
+    }
+    if (attachmentSettings && files.some((file) => file.size > attachmentSettings.attachmentMaxBytes)) {
+      addToast(t('errors.attachmentTooLarge', {}), 'error');
+      return;
+    }
+    if (attachmentSettings && files.some((file) => !attachmentSettings.allowedMimeTypes.includes(file.type))) {
+      addToast(t('errors.attachmentTypeNotAllowed', {}), 'error');
+      return;
+    }
     setSubmitting(true);
     setMutationError(null);
     let reply;
@@ -182,7 +215,28 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
             <Text size='xs' c='dimmed'>
               {t('fields.assignedTo', {})}
             </Text>
-            <Text mt='xs'>{detail.assignedStaffName ?? t('fields.unassigned', {})}</Text>
+            {scope === 'admin' && canAssign ? (
+              <Select
+                mt='xs'
+                searchable
+                clearable
+                placeholder={t('fields.unassigned', {})}
+                data={[
+                  ...(detail.assignedStaffUuid && !agents.data?.some((agent) => agent.uuid === detail.assignedStaffUuid)
+                    ? [{ value: detail.assignedStaffUuid, label: detail.assignedStaffName ?? detail.assignedStaffUuid }]
+                    : []),
+                  ...(agents.data ?? []).map((agent) => ({ value: agent.uuid, label: agent.username })),
+                ]}
+                value={detail.assignedStaffUuid}
+                loading={agents.loading}
+                disabled={submitting}
+                onChange={async (staffUuid) => {
+                  await mutate(() => assignTicket(ticket, staffUuid), t('notices.assignmentUpdated', {}));
+                }}
+              />
+            ) : (
+              <Text mt='xs'>{detail.assignedStaffName ?? t('fields.unassigned', {})}</Text>
+            )}
           </Card>
         </SimpleGrid>
 
@@ -277,11 +331,16 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
                   onChange={(event) => setInternalNote(event.currentTarget.checked)}
                 />
               )}
-              {(scope === 'account' || canAttachments) && (
+              {(scope === 'account' || canAttachments) && configuration.data?.attachmentsEnabled !== false && (
                 <FileInput
                   label={t('fields.attachments', {})}
-                  description={t('fields.attachmentsDescription', {})}
-                  accept='image/png,image/jpeg,text/plain,application/pdf'
+                  description={t('fields.attachmentsConfiguredDescription', {
+                    count: configuration.data?.attachmentMaxFiles ?? 5,
+                    size: Math.floor((configuration.data?.attachmentMaxBytes ?? 10485760) / 1048576),
+                  })}
+                  accept={(
+                    configuration.data?.allowedMimeTypes ?? ['image/png', 'image/jpeg', 'text/plain', 'application/pdf']
+                  ).join(',')}
                   multiple
                   clearable
                   value={files}
@@ -324,7 +383,11 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
               </Button>
             </Group>
           </Card>
-        ) : scope === 'account' ? (
+        ) : scope === 'account' &&
+          !(
+            (detail.status === 'closed' || detail.status === 'resolved') &&
+            configuration.data?.allowReopen === false
+          ) ? (
           <Group justify='flex-end'>
             <Button
               variant='default'
@@ -363,6 +426,11 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
           {t('actions.delete', {})}
         </Button>
       )}
+      {scope === 'admin' && detail && (canEdit || canMoveDepartment || canUpdatePriority) && (
+        <Button variant='default' leftSection={<FontAwesomeIcon icon={faPen} />} onClick={() => setEditOpened(true)}>
+          {t('actions.editTicket', {})}
+        </Button>
+      )}
       <Button
         variant='default'
         leftSection={<FontAwesomeIcon icon={faArrowLeft} />}
@@ -387,6 +455,17 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
   return (
     <>
       {page}
+      {detail && (
+        <EditTicketModal
+          detail={detail}
+          opened={editOpened}
+          onClose={() => setEditOpened(false)}
+          onUpdated={() => resource.refetch()}
+          canEdit={canEdit}
+          canMoveDepartment={canMoveDepartment}
+          canUpdatePriority={canUpdatePriority}
+        />
+      )}
       <ConfirmationModal
         opened={deleteOpened}
         onClose={() => setDeleteOpened(false)}

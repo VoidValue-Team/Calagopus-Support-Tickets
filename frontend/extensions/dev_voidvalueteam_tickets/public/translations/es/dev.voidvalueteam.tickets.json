@@ -1,23 +1,192 @@
 {
   "items": {
-    "ticket": {"zero":"{count} tickets","one":"{count} ticket","two":"{count} tickets","few":"{count} tickets","many":"{count} tickets","other":"{count} tickets"}
+    "ticket": {
+      "zero": "{count} tickets",
+      "one": "{count} ticket",
+      "two": "{count} tickets",
+      "few": "{count} tickets",
+      "many": "{count} tickets",
+      "other": "{count} tickets"
+    }
   },
   "translations": {
-    "nav":{"support":"Soporte"},
-    "pages":{"account":{"title":"Tickets de soporte","subtitle":"Crea y consulta tus conversaciones con soporte."},"admin":{"title":"Cola de soporte","subtitle":"Gestiona solicitudes de clientes y niveles de servicio."},"detail":{"title":"Ticket de soporte","subtitle":"Conversación y gestión del ticket."},"settings":{"title":"Configuración de soporte"}},
-    "actions":{"create":"Crear ticket","submit":"Enviar ticket","open":"Abrir ticket","reply":"Responder","sendReply":"Enviar respuesta","internalNote":"Nota interna","internalNoteDescription":"Solo el equipo de soporte puede ver las notas internas.","addInternalNote":"Añadir nota interna","updateStatus":"Actualizar estado","close":"Cerrar ticket","reopen":"Reabrir ticket","backToTickets":"Volver a los tickets","search":"Buscar tickets","delete":"Eliminar","deleteTicket":"Eliminar ticket","deletePermanently":"Eliminar permanentemente"},
-    "fields":{"subject":"Asunto","message":"Describe el problema","department":"Departamento","priority":"Prioridad","status":"Estado","customer":"Cliente","server":"Servidor afectado (opcional)","serverDescription":"Selecciona un servidor solo si la consulta está relacionada con uno.","noServer":"No relacionado con un servidor","createdAt":"Creado","assignedTo":"Agente asignado","unassigned":"Sin asignar","attachments":"Archivos adjuntos","attachmentsDescription":"Hasta 5 archivos de 10 MB: PNG, JPG, TXT o PDF."},
-    "columns":{"code":"Código","subject":"Asunto","customer":"Cliente","server":"Servidor","department":"Departamento","priority":"Prioridad","status":"Estado","updated":"Última respuesta","sla":"SLA"},
-    "statuses":{"open":"Abierto","awaiting_staff":"Esperando al equipo","awaiting_customer":"Esperando al cliente","in_progress":"En curso","resolved":"Resuelto","closed":"Cerrado"},
-    "priorities":{"low":"Baja","normal":"Normal","high":"Alta","urgent":"Urgente"},
-    "sla":{"breached":"Incumplido","ok":"OK"},
-    "messageTypes":{"customer":"Cliente","staff":"Equipo de soporte","internal_note":"Nota interna","system":"Sistema"},
-    "categories":{"open":"Abiertos","closed":"Cerrados","all":"Todos"},
-    "statistics":{"open":"Tickets abiertos","awaitingStaff":"Esperando al equipo","urgent":"Urgentes","sla":"SLA incumplido"},
-    "notices":{"ticketCreated":"Ticket creado.","replySent":"Respuesta enviada.","statusUpdated":"Estado del ticket actualizado.","ticketDeleted":"Ticket eliminado permanentemente.","ticketCreatedWithoutAttachments":"El ticket se creó, pero no se pudieron adjuntar sus archivos.","replySentWithoutAttachments":"La respuesta se envió, pero no se pudieron adjuntar sus archivos."},
-    "errors":{"ticketUnavailable":"No se pudo cargar el ticket o ya no está disponible.","createdMessageUnavailable":"No se pudo identificar el mensaje para adjuntar los archivos."},
-    "warnings":{"deleteTicket":"Se eliminará permanentemente el ticket {code}, toda su conversación y sus archivos. Esta acción no se puede deshacer."},
-    "empty":"No se encontraron tickets de soporte.",
-    "quickActions":{"category":"Soporte","open":"Abrir soporte","unassigned":"Tickets sin asignar","urgent":"Tickets urgentes"}
+    "common": { "enabled": "Activo", "disabled": "Inactivo" },
+    "units": { "days": "días", "minutes": "minutos" },
+    "nav": { "support": "Soporte" },
+    "pages": {
+      "account": { "title": "Tickets de soporte", "subtitle": "Crea y consulta tus conversaciones con soporte." },
+      "admin": { "title": "Cola de soporte", "subtitle": "Gestiona solicitudes de clientes y niveles de servicio." },
+      "detail": { "title": "Ticket de soporte", "subtitle": "Conversación y gestión del ticket." },
+      "settings": { "title": "Configuración de soporte" }
+    },
+    "actions": {
+      "create": "Crear ticket",
+      "submit": "Enviar ticket",
+      "open": "Abrir ticket",
+      "reply": "Responder",
+      "sendReply": "Enviar respuesta",
+      "internalNote": "Nota interna",
+      "internalNoteDescription": "Solo el equipo de soporte puede ver las notas internas.",
+      "addInternalNote": "Añadir nota interna",
+      "updateStatus": "Actualizar estado",
+      "close": "Cerrar ticket",
+      "reopen": "Reabrir ticket",
+      "backToTickets": "Volver a los tickets",
+      "search": "Buscar tickets",
+      "delete": "Eliminar",
+      "deleteTicket": "Eliminar ticket",
+      "deletePermanently": "Eliminar permanentemente",
+      "editTicket": "Editar ticket",
+      "saveChanges": "Guardar cambios",
+      "edit": "Editar",
+      "createDepartment": "Crear departamento",
+      "editDepartment": "Editar departamento",
+      "deleteDepartment": "Eliminar departamento"
+    },
+    "fields": {
+      "subject": "Asunto",
+      "message": "Describe el problema",
+      "department": "Departamento",
+      "priority": "Prioridad",
+      "status": "Estado",
+      "customer": "Cliente",
+      "server": "Servidor afectado (opcional)",
+      "serverDescription": "Selecciona un servidor solo si la consulta está relacionada con uno.",
+      "noServer": "No relacionado con un servidor",
+      "createdAt": "Creado",
+      "assignedTo": "Agente asignado",
+      "unassigned": "Sin asignar",
+      "attachments": "Archivos adjuntos",
+      "attachmentsDescription": "Hasta 5 archivos de 10 MB: PNG, JPG, TXT o PDF.",
+      "attachmentsConfiguredDescription": "Hasta {count} archivos de {size} MB cada uno. Los formatos aceptados siguen la configuración de soporte.",
+      "name": "Nombre",
+      "position": "Orden de visualización",
+      "description": "Descripción",
+      "defaultPriority": "Prioridad predeterminada",
+      "firstResponseSla": "SLA de primera respuesta (minutos)",
+      "resolutionSla": "SLA de resolución (minutos)",
+      "autoresponse": "Respuesta automática",
+      "enabled": "Activo",
+      "allowServerAccess": "Permitir acceso temporal al servidor",
+      "notificationEnabled": "Notificaciones del departamento"
+    },
+    "columns": {
+      "code": "Código",
+      "subject": "Asunto",
+      "customer": "Cliente",
+      "server": "Servidor",
+      "department": "Departamento",
+      "priority": "Prioridad",
+      "status": "Estado",
+      "updated": "Última respuesta",
+      "sla": "SLA"
+    },
+    "statuses": {
+      "open": "Abierto",
+      "awaiting_staff": "Esperando al equipo",
+      "awaiting_customer": "Esperando al cliente",
+      "in_progress": "En curso",
+      "resolved": "Resuelto",
+      "closed": "Cerrado"
+    },
+    "priorities": { "low": "Baja", "normal": "Normal", "high": "Alta", "urgent": "Urgente" },
+    "sla": { "breached": "Incumplido", "ok": "OK" },
+    "messageTypes": {
+      "customer": "Cliente",
+      "staff": "Equipo de soporte",
+      "internal_note": "Nota interna",
+      "system": "Sistema"
+    },
+    "categories": { "open": "Abiertos", "closed": "Cerrados", "all": "Todos" },
+    "statistics": {
+      "open": "Tickets abiertos",
+      "awaitingStaff": "Esperando al equipo",
+      "urgent": "Urgentes",
+      "sla": "SLA incumplido"
+    },
+    "notices": {
+      "ticketCreated": "Ticket creado.",
+      "replySent": "Respuesta enviada.",
+      "statusUpdated": "Estado del ticket actualizado.",
+      "ticketDeleted": "Ticket eliminado permanentemente.",
+      "ticketCreatedWithoutAttachments": "El ticket se creó, pero no se pudieron adjuntar sus archivos.",
+      "replySentWithoutAttachments": "La respuesta se envió, pero no se pudieron adjuntar sus archivos.",
+      "assignmentUpdated": "Agente asignado actualizado.",
+      "ticketUpdated": "Propiedades del ticket actualizadas.",
+      "settingsSaved": "Configuración de soporte guardada.",
+      "departmentCreated": "Departamento creado.",
+      "departmentUpdated": "Departamento actualizado.",
+      "departmentDeleted": "Departamento eliminado."
+    },
+    "errors": {
+      "ticketUnavailable": "No se pudo cargar el ticket o ya no está disponible.",
+      "createdMessageUnavailable": "No se pudo identificar el mensaje para adjuntar los archivos.",
+      "tooManyFiles": "Has seleccionado más archivos de los permitidos por la configuración.",
+      "attachmentTooLarge": "Al menos un archivo supera el tamaño máximo configurado.",
+      "attachmentTypeNotAllowed": "Al menos un formato de archivo no está permitido por la configuración."
+    },
+    "warnings": {
+      "deleteTicket": "Se eliminará permanentemente el ticket {code}, toda su conversación y sus archivos. Esta acción no se puede deshacer.",
+      "deleteDepartment": "Se eliminará permanentemente el departamento {name}. No se pueden borrar departamentos en uso, el predeterminado ni el último departamento activo."
+    },
+    "configuration": {
+      "general": {
+        "title": "General",
+        "description": "Controla la disponibilidad, numeración y departamento inicial de los tickets."
+      },
+      "lifecycle": {
+        "title": "Ciclo de vida del ticket",
+        "description": "Configura las reglas de reapertura y cierre automático."
+      },
+      "notifications": {
+        "title": "Notificaciones por correo",
+        "description": "Elige qué participantes reciben actualizaciones por correo."
+      },
+      "attachments": {
+        "title": "Archivos adjuntos",
+        "description": "Define los límites globales de subida y los formatos aceptados."
+      },
+      "access": {
+        "title": "Acceso temporal de soporte",
+        "description": "Define la duración y los permisos de las solicitudes de acceso a servidores.",
+        "warning": "Esta versión guarda la política de acceso, pero la concesión automática de permisos sigue en preparación. Activarla no concede acceso por sí sola."
+      },
+      "departments": {
+        "title": "Departamentos",
+        "description": "Crea, ordena, activa, edita o elimina departamentos de soporte.",
+        "noDescription": "Sin descripción.",
+        "summary": "{priority} predeterminada · Primera respuesta {first} min · Resolución {resolution} min"
+      },
+      "enabled": "Activar tickets de soporte",
+      "ticketPrefix": "Prefijo de los tickets",
+      "defaultDepartment": "Departamento predeterminado",
+      "defaultDepartmentDescription": "Se usa cuando no se selecciona un departamento explícitamente.",
+      "allowUserPriority": "Permitir que el cliente seleccione prioridad",
+      "allowReopen": "Permitir que el cliente reabra tickets",
+      "reopenPeriodDays": "Periodo de reapertura",
+      "autoCloseEnabled": "Activar cierre automático",
+      "inactivityDays": "Días para marcar un ticket inactivo como resuelto",
+      "finalCloseDelayDays": "Días entre resolución y cierre definitivo",
+      "customerEmails": "Correos para clientes",
+      "staffEmails": "Correos para el equipo",
+      "attachmentsEnabled": "Activar archivos adjuntos",
+      "attachmentMaxBytes": "Tamaño máximo por archivo",
+      "attachmentMaxFiles": "Máximo de archivos por mensaje",
+      "allowedMimeTypes": "Tipos MIME permitidos",
+      "allowedMimeTypesDescription": "Añade el tipo MIME exacto informado por el archivo subido.",
+      "supportAccessEnabled": "Activar solicitudes de acceso temporal",
+      "revokeAccessOnResolved": "Revocar el acceso temporal al resolver",
+      "supportAccessDefaultMinutes": "Duración predeterminada del acceso",
+      "supportAccessMaxMinutes": "Duración máxima del acceso",
+      "supportAccessPermissions": "Permisos del acceso temporal",
+      "supportAccessPermissionsDescription": "Permisos que podría conceder una futura solicitud de acceso aprobada."
+    },
+    "empty": "No se encontraron tickets de soporte.",
+    "quickActions": {
+      "category": "Soporte",
+      "open": "Abrir soporte",
+      "unassigned": "Tickets sin asignar",
+      "urgent": "Tickets urgentes"
+    }
   }
 }

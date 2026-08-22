@@ -51,6 +51,14 @@ export const attachmentSchema = z.object({
   sha256: z.string().nullable(),
   createdAt: z.coerce.date(),
 });
+export const supportAgentSchema = z.object({
+  uuid: z.string().uuid(),
+  username: z.string(),
+});
+export const supportServerSchema = z.object({
+  uuid: z.string().uuid(),
+  name: z.string(),
+});
 export const ticketDetailSchema = ticketSummarySchema.extend({
   messages: z.array(messageSchema),
   attachments: z.array(attachmentSchema),
@@ -68,6 +76,18 @@ export const departmentSchema = z.object({
   allowServerAccess: z.boolean(),
   notificationEnabled: z.boolean(),
 });
+export const departmentPayloadSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  description: z.string().max(500),
+  enabled: z.boolean(),
+  position: z.number().int().min(0).max(10000),
+  defaultPriority: ticketPrioritySchema,
+  firstResponseSlaMinutes: z.number().int().min(1).max(525600),
+  resolutionSlaMinutes: z.number().int().min(1).max(525600),
+  autoresponse: z.string().max(20000).nullable(),
+  allowServerAccess: z.boolean(),
+  notificationEnabled: z.boolean(),
+});
 export const createTicketSchema = z.object({
   subject: z.string().min(3).max(180),
   message: z.string().min(1).max(20000),
@@ -80,10 +100,20 @@ export const replyTicketSchema = z.object({
   internalNote: z.boolean().optional(),
 });
 export const updateTicketStatusSchema = z.object({ status: ticketStatusSchema });
+export const assignTicketSchema = z.object({ staffUuid: z.string().uuid().nullable() });
+export const editTicketSchema = z.object({
+  subject: z.string().trim().min(3).max(180),
+  departmentUuid: z.string().uuid(),
+  priority: ticketPrioritySchema,
+  serverUuid: z.string().uuid().nullable(),
+});
 export type TicketSummary = z.infer<typeof ticketSummarySchema>;
 export type TicketDetail = z.infer<typeof ticketDetailSchema>;
 export type TicketAttachment = z.infer<typeof attachmentSchema>;
+export type SupportAgent = z.infer<typeof supportAgentSchema>;
+export type EditTicket = z.infer<typeof editTicketSchema>;
 export type Department = z.infer<typeof departmentSchema>;
+export type DepartmentPayload = z.infer<typeof departmentPayloadSchema>;
 export type CreateTicket = z.infer<typeof createTicketSchema>;
 export type ReplyTicket = z.infer<typeof replyTicketSchema>;
 export type TicketStatus = z.infer<typeof ticketStatusSchema>;

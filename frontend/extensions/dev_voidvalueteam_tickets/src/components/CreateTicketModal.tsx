@@ -1,7 +1,7 @@
 import { FileInput, Stack } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { zod4Resolver } from 'mantine-form-zod-resolver';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { httpErrorToHuman } from '@/api/axios.ts';
 import getServers from '@/api/server/getServers.ts';
 import Button from '@/elements/Button.tsx';
@@ -16,6 +16,7 @@ import { useToast } from '@/providers/ToastProvider.tsx';
 import { uploadAttachments } from '../api/tickets/attachments.ts';
 import createTicket from '../api/tickets/createTicket.ts';
 import getDepartments from '../api/tickets/getDepartments.ts';
+import getPublicSettings from '../api/tickets/getPublicSettings.ts';
 import { type CreateTicket, createTicketSchema } from '../schemas/tickets.ts';
 import { useExtTranslations } from '../translations.ts';
 export default function CreateTicketModal({ onCreated }: { onCreated: () => void }) {
@@ -29,6 +30,11 @@ export default function CreateTicketModal({ onCreated }: { onCreated: () => void
     queryKey: ['extensions', 'dev.voidvalueteam.tickets', 'departments'],
     queryFn: getDepartments,
   });
+  const configuration = useResource({
+    queryKey: ['extensions', 'dev.voidvalueteam.tickets', 'public-settings', 'account'],
+    queryFn: () => getPublicSettings('account'),
+    silent: true,
+  });
   const form = useForm<CreateTicket>({
     initialValues: {
       subject: '',
@@ -39,7 +45,25 @@ export default function CreateTicketModal({ onCreated }: { onCreated: () => void
     },
     validate: zod4Resolver(createTicketSchema),
   });
+  useEffect(() => {
+    if (!form.values.departmentUuid && configuration.data?.defaultDepartment) {
+      form.setFieldValue('departmentUuid', configuration.data.defaultDepartment);
+    }
+  }, [configuration.data?.defaultDepartment]);
   const submit = async (values: CreateTicket) => {
+    const settings = configuration.data;
+    if (settings && files.length > settings.attachmentMaxFiles) {
+      addToast(t('errors.tooManyFiles', {}), 'error');
+      return;
+    }
+    if (settings && files.some((file) => file.size > settings.attachmentMaxBytes)) {
+      addToast(t('errors.attachmentTooLarge', {}), 'error');
+      return;
+    }
+    if (settings && files.some((file) => !settings.allowedMimeTypes.includes(file.type))) {
+      addToast(t('errors.attachmentTypeNotAllowed', {}), 'error');
+      return;
+    }
     setLoading(true);
     let detail;
     try {
@@ -73,7 +97,9 @@ export default function CreateTicketModal({ onCreated }: { onCreated: () => void
   };
   return (
     <>
-      <Button onClick={() => setOpened(true)}>{t('actions.create', {})}</Button>
+      <Button disabled={configuration.data?.enabled === false} onClick={() => setOpened(true)}>
+        {t('actions.create', {})}
+      </Button>
       <Modal opened={opened} onClose={() => setOpened(false)} title={t('actions.create', {})}>
         <form onSubmit={form.onSubmit(submit)}>
           <Stack>
@@ -101,25 +127,34 @@ export default function CreateTicketModal({ onCreated }: { onCreated: () => void
               value={form.values.serverUuid ?? null}
               onChange={(serverUuid) => form.setFieldValue('serverUuid', serverUuid)}
             />
-            <Select
-              label={t('fields.priority', {})}
-              data={(['low', 'normal', 'high', 'urgent'] as const).map((priority) => ({
-                value: priority,
-                label: t(`priorities.${priority}`, {}),
-              }))}
-              {...form.getInputProps('priority')}
-            />
+            {configuration.data?.allowUserPriority !== false && (
+              <Select
+                label={t('fields.priority', {})}
+                data={(['low', 'normal', 'high', 'urgent'] as const).map((priority) => ({
+                  value: priority,
+                  label: t(`priorities.${priority}`, {}),
+                }))}
+                {...form.getInputProps('priority')}
+              />
+            )}
             <TextInput label={t('fields.subject', {})} {...form.getInputProps('subject')} />
             <TextArea label={t('fields.message', {})} minRows={6} {...form.getInputProps('message')} />
-            <FileInput
-              label={t('fields.attachments', {})}
-              description={t('fields.attachmentsDescription', {})}
-              accept='image/png,image/jpeg,text/plain,application/pdf'
-              multiple
-              clearable
-              value={files}
-              onChange={(value) => setFiles(value ?? [])}
-            />
+            {configuration.data?.attachmentsEnabled !== false && (
+              <FileInput
+                label={t('fields.attachments', {})}
+                description={t('fields.attachmentsConfiguredDescription', {
+                  count: configuration.data?.attachmentMaxFiles ?? 5,
+                  size: Math.floor((configuration.data?.attachmentMaxBytes ?? 10485760) / 1048576),
+                })}
+                accept={(
+                  configuration.data?.allowedMimeTypes ?? ['image/png', 'image/jpeg', 'text/plain', 'application/pdf']
+                ).join(',')}
+                multiple
+                clearable
+                value={files}
+                onChange={(value) => setFiles(value ?? [])}
+              />
+            )}
             <ModalFooter>
               <Button type='submit' loading={loading}>
                 {t('actions.submit', {})}
