@@ -40,9 +40,9 @@ jobs:
 
       - name: Add extension to workspace
         run: |
-          rsync -a extension/backend-extensions/dev_voidvalueteam_tickets/ panel/backend-extensions/dev_voidvalueteam_tickets/
-          rsync -a extension/frontend/extensions/dev_voidvalueteam_tickets/ panel/frontend/extensions/dev_voidvalueteam_tickets/
-          rsync -a extension/database/extension-migrations/dev_voidvalueteam_tickets/ panel/database/extension-migrations/dev_voidvalueteam_tickets/
+          rsync -a extension/backend-extensions/team_voidvalue_tickets/ panel/backend-extensions/team_voidvalue_tickets/
+          rsync -a extension/frontend/extensions/team_voidvalue_tickets/ panel/frontend/extensions/team_voidvalue_tickets/
+          rsync -a extension/database/extension-migrations/team_voidvalue_tickets/ panel/database/extension-migrations/team_voidvalue_tickets/
 
       - name: Frontend
         working-directory: panel/frontend
@@ -52,12 +52,12 @@ jobs:
 
       - name: Rust formatting
         working-directory: panel
-        run: cargo fmt --check -p dev_voidvalueteam_tickets
+        run: cargo fmt --check -p team_voidvalue_tickets
 
       - name: Rust lint
         working-directory: panel
-        run: cargo clippy -p dev_voidvalueteam_tickets --all-targets -- -D warnings
+        run: cargo clippy -p team_voidvalue_tickets --all-targets -- -D warnings
 
       - name: Rust tests
         working-directory: panel
-        run: cargo test -p dev_voidvalueteam_tickets
+        run: cargo test -p team_voidvalue_tickets
