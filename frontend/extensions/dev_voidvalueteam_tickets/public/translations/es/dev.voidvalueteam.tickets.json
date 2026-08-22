@@ -4,10 +4,16 @@
   },
   "translations": {
     "nav":{"support":"Soporte"},
-    "pages":{"account":{"title":"Tickets de soporte","subtitle":"Crea y consulta tus conversaciones con soporte."},"server":{"title":"Soporte del servidor","subtitle":"Tickets relacionados con este servidor."},"admin":{"title":"Cola de soporte","subtitle":"Gestiona solicitudes de clientes y niveles de servicio."},"settings":{"title":"Configuración de soporte"}},
-    "actions":{"create":"Crear ticket","submit":"Enviar ticket","open":"Abrir ticket"},
-    "fields":{"subject":"Asunto","message":"Describe el problema","department":"Departamento","priority":"Prioridad"},
-    "columns":{"code":"Código","subject":"Asunto","department":"Departamento","priority":"Prioridad","status":"Estado","updated":"Última respuesta","sla":"SLA"},
+    "pages":{"account":{"title":"Tickets de soporte","subtitle":"Crea y consulta tus conversaciones con soporte."},"admin":{"title":"Cola de soporte","subtitle":"Gestiona solicitudes de clientes y niveles de servicio."},"detail":{"title":"Ticket de soporte","subtitle":"Conversación y gestión del ticket."},"settings":{"title":"Configuración de soporte"}},
+    "actions":{"create":"Crear ticket","submit":"Enviar ticket","open":"Abrir ticket","reply":"Responder","sendReply":"Enviar respuesta","internalNote":"Nota interna","internalNoteDescription":"Solo el equipo de soporte puede ver las notas internas.","addInternalNote":"Añadir nota interna","updateStatus":"Actualizar estado","close":"Cerrar ticket","reopen":"Reabrir ticket","backToTickets":"Volver a los tickets","search":"Buscar tickets"},
+    "fields":{"subject":"Asunto","message":"Describe el problema","department":"Departamento","priority":"Prioridad","status":"Estado","customer":"Cliente","server":"Servidor afectado (opcional)","serverDescription":"Selecciona un servidor solo si la consulta está relacionada con uno.","noServer":"No relacionado con un servidor","createdAt":"Creado"},
+    "columns":{"code":"Código","subject":"Asunto","customer":"Cliente","server":"Servidor","department":"Departamento","priority":"Prioridad","status":"Estado","updated":"Última respuesta","sla":"SLA"},
+    "statuses":{"open":"Abierto","awaiting_staff":"Esperando al equipo","awaiting_customer":"Esperando al cliente","in_progress":"En curso","resolved":"Resuelto","closed":"Cerrado"},
+    "priorities":{"low":"Baja","normal":"Normal","high":"Alta","urgent":"Urgente"},
+    "sla":{"breached":"Incumplido","ok":"OK"},
+    "messageTypes":{"customer":"Cliente","staff":"Equipo de soporte","internal_note":"Nota interna","system":"Sistema"},
+    "notices":{"ticketCreated":"Ticket creado.","replySent":"Respuesta enviada.","statusUpdated":"Estado del ticket actualizado."},
+    "errors":{"ticketUnavailable":"No se pudo cargar el ticket o ya no está disponible."},
     "empty":"No se encontraron tickets de soporte.",
     "quickActions":{"category":"Soporte","open":"Abrir soporte","unassigned":"Tickets sin asignar","urgent":"Tickets urgentes"}
   }

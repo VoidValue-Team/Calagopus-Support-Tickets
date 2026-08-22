@@ -29,7 +29,6 @@ impl Extension for ExtensionStruct {
     ) -> ExtensionRouteBuilder {
         builder
             .add_client_api_router(|r| r.merge(routes::client::router(&state)))
-            .add_client_server_api_router(|r| r.merge(routes::server::router(&state)))
             .add_admin_api_router(|r| {
                 r.nest(
                     "/extensions/dev.voidvalueteam.tickets",

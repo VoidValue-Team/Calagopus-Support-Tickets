@@ -17,20 +17,6 @@ pub fn register(builder: ExtensionPermissionsBuilder) -> ExtensionPermissionsBui
                 ]),
             },
         )
-        .add_server_permission_group(
-            "support",
-            PermissionGroup {
-                description: "Support tickets associated with this server.",
-                permissions: IndexMap::from([
-                    ("read", "View server support tickets."),
-                    ("create", "Create a server support ticket."),
-                    ("reply", "Reply to server tickets."),
-                    ("grant-access", "Grant approved temporary support access."),
-                    ("revoke-access", "Revoke temporary support access."),
-                    ("attachments", "Manage server ticket attachments."),
-                ]),
-            },
-        )
         .add_admin_permission_group(
             "support",
             PermissionGroup {

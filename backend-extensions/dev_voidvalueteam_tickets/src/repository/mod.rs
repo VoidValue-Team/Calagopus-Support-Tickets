@@ -5,16 +5,24 @@ use sqlx::{Postgres, QueryBuilder};
 use uuid::Uuid;
 
 const SUMMARY_COLUMNS: &str = r#"
- t.uuid, t.number, t.code, t.user_uuid, t.server_uuid, t.department_uuid,
+ t.uuid, t.number, t.code, t.user_uuid, ticket_user.username AS user_name,
+ t.server_uuid, ticket_server.name AS server_name, t.department_uuid,
  d.name AS department_name, t.subject, t.status, t.priority, t.assigned_staff_uuid,
+ assigned_staff.username AS assigned_staff_name,
  t.created_at, t.updated_at, t.last_reply_at, t.first_response_due_at,
  t.resolution_due_at, t.first_response_sla_breached, t.resolution_sla_breached
+"#;
+
+const SUMMARY_JOINS: &str = r#"
+ JOIN dev_voidvalueteam_tickets_departments d ON d.uuid=t.department_uuid
+ JOIN users ticket_user ON ticket_user.uuid=t.user_uuid
+ LEFT JOIN servers ticket_server ON ticket_server.uuid=t.server_uuid
+ LEFT JOIN users assigned_staff ON assigned_staff.uuid=t.assigned_staff_uuid
 "#;
 
 #[derive(Clone, Copy)]
 pub enum TicketScope {
     User(Uuid),
-    Server(Uuid),
     Admin,
 }
 
@@ -156,14 +164,11 @@ pub async fn list_tickets(
     let page = query.page.unwrap_or(1).max(1);
     let per_page = query.per_page.unwrap_or(25).clamp(1, 100);
     let mut qb = QueryBuilder::<Postgres>::new(format!(
-        "SELECT {SUMMARY_COLUMNS}, COUNT(*) OVER() AS total_count FROM dev_voidvalueteam_tickets_tickets t JOIN dev_voidvalueteam_tickets_departments d ON d.uuid=t.department_uuid WHERE TRUE"
+        "SELECT {SUMMARY_COLUMNS}, COUNT(*) OVER() AS total_count FROM dev_voidvalueteam_tickets_tickets t {SUMMARY_JOINS} WHERE TRUE"
     ));
     match scope {
         TicketScope::User(id) => {
             qb.push(" AND t.user_uuid = ").push_bind(id);
-        }
-        TicketScope::Server(id) => {
-            qb.push(" AND t.server_uuid = ").push_bind(id);
         }
         TicketScope::Admin => {}
     }
@@ -219,17 +224,16 @@ pub async fn get_ticket(
     include_internal: bool,
 ) -> anyhow::Result<Option<TicketDetail>> {
     let mut sql = format!(
-        "SELECT {SUMMARY_COLUMNS} FROM dev_voidvalueteam_tickets_tickets t JOIN dev_voidvalueteam_tickets_departments d ON d.uuid=t.department_uuid WHERE t.uuid=$1"
+        "SELECT {SUMMARY_COLUMNS} FROM dev_voidvalueteam_tickets_tickets t {SUMMARY_JOINS} WHERE t.uuid=$1"
     );
     match scope {
         TicketScope::User(_) => sql.push_str(" AND t.user_uuid=$2"),
-        TicketScope::Server(_) => sql.push_str(" AND t.server_uuid=$2"),
         TicketScope::Admin => {}
     }
     // The only dynamic fragments above are fixed, locally selected ownership clauses.
     let base = sqlx::query_as::<_, TicketSummary>(sqlx::AssertSqlSafe(sql)).bind(uuid);
     let ticket = match scope {
-        TicketScope::User(id) | TicketScope::Server(id) => base.bind(id),
+        TicketScope::User(id) => base.bind(id),
         TicketScope::Admin => base,
     }
     .fetch_optional(state.database.read())
@@ -239,9 +243,11 @@ pub async fn get_ticket(
     };
     let messages = sqlx::query_as::<_, TicketMessage>(
         r#"
-      SELECT uuid,ticket_uuid,author_uuid,message_type,body,created_at,edited_at
-      FROM dev_voidvalueteam_tickets_messages
-      WHERE ticket_uuid=$1 AND ($2 OR message_type <> 'internal_note') ORDER BY created_at
+      SELECT m.uuid,m.ticket_uuid,m.author_uuid,u.username AS author_name,
+             m.message_type,m.body,m.created_at,m.edited_at
+      FROM dev_voidvalueteam_tickets_messages m
+      LEFT JOIN users u ON u.uuid=m.author_uuid
+      WHERE m.ticket_uuid=$1 AND ($2 OR m.message_type <> 'internal_note') ORDER BY m.created_at
     "#,
     )
     .bind(uuid)
@@ -260,13 +266,17 @@ pub async fn reply(
     kind: MessageType,
 ) -> anyhow::Result<TicketDetail> {
     let mut tx = state.database.write().begin().await?;
-    let row: Option<(TicketStatus, Uuid, Option<Uuid>)> = sqlx::query_as(r#"
-      SELECT status,user_uuid,server_uuid FROM dev_voidvalueteam_tickets_tickets WHERE uuid=$1 FOR UPDATE
-    "#).bind(ticket_uuid).fetch_optional(&mut *tx).await?;
-    let (status, owner, server) = row.ok_or_else(|| anyhow::anyhow!("ticket not found"))?;
+    let row: Option<(TicketStatus, Uuid)> = sqlx::query_as(
+        r#"
+      SELECT status,user_uuid FROM dev_voidvalueteam_tickets_tickets WHERE uuid=$1 FOR UPDATE
+    "#,
+    )
+    .bind(ticket_uuid)
+    .fetch_optional(&mut *tx)
+    .await?;
+    let (status, owner) = row.ok_or_else(|| anyhow::anyhow!("ticket not found"))?;
     match scope {
         TicketScope::User(id) if id != owner => anyhow::bail!("ticket not found"),
-        TicketScope::Server(id) if Some(id) != server => anyhow::bail!("ticket not found"),
         _ => {}
     }
     if status == TicketStatus::Closed {

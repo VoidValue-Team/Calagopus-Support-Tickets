@@ -1,6 +1,6 @@
 # Calagopus Support / Tickets
 
-Extensión nativa de helpdesk para Calagopus Panel. Añade tickets vinculados a una cuenta o servidor, conversación con notas internas, departamentos, asignación, estados, prioridades, SLA, respuestas guardadas, auditoría, configuración, tareas automáticas y accesos desde las áreas de cuenta, servidor y administración.
+Extensión nativa de helpdesk para Calagopus Panel. Añade una cola global de soporte con tickets de cuenta y un servidor afectado opcional, conversación con notas internas, departamentos, asignación, estados, prioridades, SLA, respuestas guardadas, auditoría, configuración, tareas automáticas y accesos desde las áreas de cuenta y administración.
 
 El paquete se identifica como `dev.voidvalueteam.tickets` y requiere **Calagopus Panel 1.1.4 o posterior**. Está diseñado para imágenes `heavy`, `nightly-heavy` o la variante AIO heavy equivalente.
 
@@ -16,10 +16,10 @@ Dos funciones quedan deliberadamente desactivadas hasta que el core exponga una 
 ## Arquitectura
 
 - `backend-extensions/dev_voidvalueteam_tickets`: extensión Rust, rutas OpenAPI, permisos, repositorio transaccional, plantillas y tareas cron.
-- `frontend/extensions/dev_voidvalueteam_tickets`: extensión React/TypeScript, rutas de cuenta, servidor y admin, configuración y traducciones.
+- `frontend/extensions/dev_voidvalueteam_tickets`: extensión React/TypeScript, rutas globales de cuenta y administración, configuración y traducciones.
 - `database/extension-migrations/dev_voidvalueteam_tickets`: migración PostgreSQL reversible y datos iniciales.
 
-Las consultas de cliente se acotan siempre por `user_uuid`; las de servidor, por `server_uuid`; y las de administración exigen permisos administrativos. El código de ticket se asigna mediante una secuencia PostgreSQL, evitando colisiones entre instancias. Las operaciones de creación, respuesta, estado y asignación usan transacciones.
+Las consultas de cliente se acotan siempre por `user_uuid` y las de administración exigen permisos administrativos. El servidor es una relación opcional seleccionable al crear el ticket y se valida contra los servidores accesibles por el usuario. El código de ticket se asigna mediante una secuencia PostgreSQL, evitando colisiones entre instancias. Las operaciones de creación, respuesta, estado y asignación usan transacciones.
 
 ## Instalación en Docker
 
@@ -80,8 +80,7 @@ Los departamentos incluyen prioridad por defecto, SLA de primera respuesta y res
 
 Grupos registrados:
 
-- Usuario: `support.create`, `support.read`, `support.reply`, `support.reopen`.
-- Servidor: `support.create`, `support.read`, `support.reply`.
+- Usuario: `tickets.create`, `tickets.read`, `tickets.reply`, `tickets.close`, `tickets.reopen`.
 - Administración: lectura, respuesta, notas internas, asignación, cambio de estado/prioridad, departamentos, respuestas guardadas, estadísticas y settings.
 
 La visibilidad de navegación está condicionada por permisos; no sustituye las comprobaciones del backend. Quick Actions no se registra en Calagopus 1.1.4 porque esa versión todavía no publica dicho registry.

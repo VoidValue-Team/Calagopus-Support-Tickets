@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { httpErrorToHuman } from '@/api/axios.ts';
 import Button from '@/elements/Button.tsx';
 import Select from '@/elements/input/Select.tsx';
+import ServerSelect from '@/elements/input/ServerSelect.tsx';
 import TextArea from '@/elements/input/TextArea.tsx';
 import TextInput from '@/elements/input/TextInput.tsx';
 import { Modal, ModalFooter } from '@/elements/modals/Modal.tsx';
@@ -14,7 +15,7 @@ import createTicket from '../api/tickets/createTicket.ts';
 import getDepartments from '../api/tickets/getDepartments.ts';
 import { type CreateTicket, createTicketSchema } from '../schemas/tickets.ts';
 import { useExtTranslations } from '../translations.ts';
-export default function CreateTicketModal({ serverUuid, onCreated }: { serverUuid?: string; onCreated: () => void }) {
+export default function CreateTicketModal({ onCreated }: { onCreated: () => void }) {
   const { t } = useExtTranslations();
   const { addToast } = useToast();
   const [opened, setOpened] = useState(false);
@@ -28,16 +29,16 @@ export default function CreateTicketModal({ serverUuid, onCreated }: { serverUui
       subject: '',
       message: '',
       departmentUuid: '',
+      serverUuid: null,
       priority: 'normal',
-      ...(serverUuid ? { serverUuid } : {}),
     },
     validate: zod4Resolver(createTicketSchema),
   });
   const submit = (values: CreateTicket) => {
     setLoading(true);
-    createTicket(values, serverUuid)
+    createTicket(values)
       .then(() => {
-        addToast('Ticket created.', 'success');
+        addToast(t('notices.ticketCreated', {}), 'success');
         setOpened(false);
         form.reset();
         onCreated();
@@ -57,9 +58,20 @@ export default function CreateTicketModal({ serverUuid, onCreated }: { serverUui
               loading={departments.loading}
               {...form.getInputProps('departmentUuid')}
             />
+            <ServerSelect
+              label={t('fields.server', {})}
+              description={t('fields.serverDescription', {})}
+              placeholder={t('fields.noServer', {})}
+              clearable
+              value={form.values.serverUuid ?? null}
+              onChange={(serverUuid) => form.setFieldValue('serverUuid', serverUuid)}
+            />
             <Select
               label={t('fields.priority', {})}
-              data={['low', 'normal', 'high', 'urgent']}
+              data={(['low', 'normal', 'high', 'urgent'] as const).map((priority) => ({
+                value: priority,
+                label: t(`priorities.${priority}`, {}),
+              }))}
               {...form.getInputProps('priority')}
             />
             <TextInput label={t('fields.subject', {})} {...form.getInputProps('subject')} />

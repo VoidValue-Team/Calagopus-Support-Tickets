@@ -1,9 +1,12 @@
 import { useState } from 'react';
+import { Route, Routes } from 'react-router';
 import AccountContentContainer from '@/elements/containers/AccountContentContainer.tsx';
 import CreateTicketModal from '../components/CreateTicketModal.tsx';
 import TicketTable from '../components/TicketTable.tsx';
 import { useExtTranslations } from '../translations.ts';
-export default function AccountTicketsPage() {
+import TicketDetailPage from './TicketDetailPage.tsx';
+
+function AccountTicketsList() {
   const { t } = useExtTranslations();
   const [key, setKey] = useState(0);
   return (
@@ -14,5 +17,14 @@ export default function AccountTicketsPage() {
     >
       <TicketTable key={key} scope='account' />
     </AccountContentContainer>
+  );
+}
+
+export default function AccountTicketsPage() {
+  return (
+    <Routes>
+      <Route path='/' element={<AccountTicketsList />} />
+      <Route path='/:ticket' element={<TicketDetailPage scope='account' />} />
+    </Routes>
   );
 }
