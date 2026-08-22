@@ -16,11 +16,11 @@ jobs:
         with:
           path: extension
 
-      - name: Checkout Calagopus 1.2.0 baseline
+      - name: Checkout Calagopus 1.1.4 baseline
         uses: actions/checkout@v4
         with:
           repository: calagopus/panel
-          ref: febe5303a1d4086199deb77579ab446b64b7880c
+          ref: adc41d62ad40b0dc8afd5ffc089d1aa441dc0563
           path: panel
 
       - uses: dtolnay/rust-toolchain@master
@@ -34,7 +34,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           cache-dependency-path: panel/frontend/pnpm-lock.yaml
 

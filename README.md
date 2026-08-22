@@ -2,11 +2,11 @@
 
 Extensión nativa de helpdesk para Calagopus Panel. Añade tickets vinculados a una cuenta o servidor, conversación con notas internas, departamentos, asignación, estados, prioridades, SLA, respuestas guardadas, auditoría, configuración, tareas automáticas y accesos desde las áreas de cuenta, servidor y administración.
 
-El paquete se identifica como `dev.voidvalueteam.tickets` y requiere **Calagopus Panel 1.2.0 o posterior**. Está diseñado para imágenes `heavy`, `nightly-heavy` o la variante AIO heavy equivalente.
+El paquete se identifica como `dev.voidvalueteam.tickets` y requiere **Calagopus Panel 1.1.4 o posterior**. Está diseñado para imágenes `heavy`, `nightly-heavy` o la variante AIO heavy equivalente.
 
 ## Estado de compatibilidad
 
-El código se valida contra el commit de Calagopus `febe5303a1d4086199deb77579ab446b64b7880c` (versión 1.2.0). La integración usa exclusivamente los registries, extractors, permisos, settings, plantillas de correo, tareas y rutas publicados por Calagopus.
+El código se valida contra el commit de Calagopus `adc41d62ad40b0dc8afd5ffc089d1aa441dc0563` (versión 1.1.4). La integración usa exclusivamente los registries, extractors, permisos, settings, plantillas de correo, tareas y rutas publicados por Calagopus.
 
 Dos funciones quedan deliberadamente desactivadas hasta que el core exponga una API segura completa:
 
@@ -16,7 +16,7 @@ Dos funciones quedan deliberadamente desactivadas hasta que el core exponga una 
 ## Arquitectura
 
 - `backend-extensions/dev_voidvalueteam_tickets`: extensión Rust, rutas OpenAPI, permisos, repositorio transaccional, plantillas y tareas cron.
-- `frontend/extensions/dev_voidvalueteam_tickets`: extensión React/TypeScript, rutas de cuenta, servidor y admin, Quick Actions, configuración y traducciones.
+- `frontend/extensions/dev_voidvalueteam_tickets`: extensión React/TypeScript, rutas de cuenta, servidor y admin, configuración y traducciones.
 - `database/extension-migrations/dev_voidvalueteam_tickets`: migración PostgreSQL reversible y datos iniciales.
 
 Las consultas de cliente se acotan siempre por `user_uuid`; las de servidor, por `server_uuid`; y las de administración exigen permisos administrativos. El código de ticket se asigna mediante una secuencia PostgreSQL, evitando colisiones entre instancias. Las operaciones de creación, respuesta, estado y asignación usan transacciones.
@@ -24,7 +24,7 @@ Las consultas de cliente se acotan siempre por `user_uuid`; las de servidor, por
 ## Instalación en Docker
 
 1. Descarga `dev_voidvalueteam_tickets.c7s.zip` desde Releases.
-2. Comprueba que el panel es 1.2.0+ y usa una imagen heavy.
+2. Comprueba que el panel es 1.1.4+ y usa una imagen heavy.
 3. En Administration → Extensions, carga el paquete y aplica la build desde la interfaz.
 4. Revisa los permisos nuevos antes de conceder acceso a usuarios o subusuarios.
 5. Configura correo y storage con los mecanismos nativos del panel; esta extensión no gestiona credenciales propias.
@@ -33,7 +33,7 @@ La instalación/rebuild puede recrear el contenedor del panel. Programa esa oper
 
 ## Desarrollo
 
-Necesitas Rust 1.97, pnpm y un checkout de `calagopus/panel` 1.2.0+.
+Necesitas Rust 1.97, pnpm y un checkout de `calagopus/panel` 1.1.4+.
 
 ```bash
 rsync -a backend-extensions/dev_voidvalueteam_tickets/ \
@@ -84,7 +84,7 @@ Grupos registrados:
 - Servidor: `support.create`, `support.read`, `support.reply`.
 - Administración: lectura, respuesta, notas internas, asignación, cambio de estado/prioridad, departamentos, respuestas guardadas, estadísticas y settings.
 
-La visibilidad de navegación y Quick Actions también está condicionada por permisos; no sustituye las comprobaciones del backend.
+La visibilidad de navegación está condicionada por permisos; no sustituye las comprobaciones del backend. Quick Actions no se registra en Calagopus 1.1.4 porque esa versión todavía no publica dicho registry.
 
 ## Email y automatización
 
@@ -118,7 +118,7 @@ Desinstalar una extensión no ejecuta automáticamente `down.sql` ni elimina sus
 
 ## Capturas
 
-Las capturas se añadirán tras validar la extensión en una instancia de Calagopus 1.2.0 con datos de demostración; no se incluyen imágenes simuladas.
+Las capturas se añadirán tras validar la extensión en una instancia de Calagopus 1.1.4 con datos de demostración; no se incluyen imágenes simuladas.
 
 ## Licencia
 

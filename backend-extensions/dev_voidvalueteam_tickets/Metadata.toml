@@ -1,3 +1,3 @@
 package_name = "dev.voidvalueteam.tickets"
 name = "Calagopus Support / Tickets"
-panel_version = ">=1.2.0"
+panel_version = ">=1.1.4"
