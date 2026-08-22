@@ -47,6 +47,13 @@ pub enum TicketPriority {
     Urgent,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, ToSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TicketView {
+    Open,
+    Closed,
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, sqlx::Type, ToSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[sqlx(
@@ -81,13 +88,16 @@ pub struct TicketSummary {
     pub number: i64,
     pub code: String,
     pub user_uuid: Uuid,
+    pub user_name: String,
     pub server_uuid: Option<Uuid>,
+    pub server_name: Option<String>,
     pub department_uuid: Uuid,
     pub department_name: String,
     pub subject: String,
     pub status: TicketStatus,
     pub priority: TicketPriority,
     pub assigned_staff_uuid: Option<Uuid>,
+    pub assigned_staff_name: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub last_reply_at: DateTime<Utc>,
@@ -102,10 +112,23 @@ pub struct TicketMessage {
     pub uuid: Uuid,
     pub ticket_uuid: Uuid,
     pub author_uuid: Option<Uuid>,
+    pub author_name: Option<String>,
     pub message_type: MessageType,
     pub body: String,
     pub created_at: DateTime<Utc>,
     pub edited_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Debug, FromRow, Serialize, ToSchema)]
+pub struct TicketAttachment {
+    pub uuid: Uuid,
+    pub message_uuid: Uuid,
+    pub uploader_uuid: Option<Uuid>,
+    pub original_filename: String,
+    pub mime_type: String,
+    pub size_bytes: i64,
+    pub sha256: Option<String>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Clone, Debug, Serialize, ToSchema)]
@@ -113,6 +136,7 @@ pub struct TicketDetail {
     #[serde(flatten)]
     pub ticket: TicketSummary,
     pub messages: Vec<TicketMessage>,
+    pub attachments: Vec<TicketAttachment>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -184,6 +208,8 @@ pub struct ListQuery {
     pub per_page: Option<i64>,
     #[garde(length(chars, max = 180))]
     pub search: Option<String>,
+    #[garde(skip)]
+    pub view: Option<TicketView>,
     #[garde(skip)]
     pub status: Option<TicketStatus>,
     #[garde(skip)]

@@ -3,7 +3,7 @@ use crate::{
     models::{MessageType, ReplyPayload, StatusPayload, TicketDetail, TicketStatus},
     repository::{self, TicketScope},
 };
-use axum::extract::Path;
+use axum::extract::{DefaultBodyLimit, Multipart, Path};
 use serde::Serialize;
 use shared::{
     GetState, State,
@@ -118,10 +118,67 @@ async fn status(
     }
 }
 
+async fn upload_attachments(
+    state: GetState,
+    permissions: GetPermissionManager,
+    user: GetUser,
+    logger: GetUserActivityLogger,
+    Path(ticket): Path<Uuid>,
+    multipart: Multipart,
+) -> ApiResponseResult {
+    permissions.has_user_permission("tickets.attachments")?;
+    match crate::routes::attachments::upload(
+        &state,
+        ticket,
+        user.uuid,
+        TicketScope::User(user.uuid),
+        multipart,
+    )
+    .await
+    {
+        Ok(ticket) => {
+            logger
+                .log(
+                    "user:support-ticket.attachments.add",
+                    serde_json::json!({"ticket_uuid":ticket.ticket.uuid}),
+                )
+                .await;
+            ApiResponse::new_serialized(Response { ticket }).ok()
+        }
+        Err(error) => api_error(error),
+    }
+}
+
+async fn download_attachment(
+    state: GetState,
+    permissions: GetPermissionManager,
+    user: GetUser,
+    Path((ticket, attachment)): Path<(Uuid, Uuid)>,
+) -> ApiResponseResult {
+    permissions.has_user_permission("tickets.attachments")?;
+    match repository::download_attachment(&state, ticket, attachment, TicketScope::User(user.uuid))
+        .await
+    {
+        Ok(Some(file)) => crate::routes::attachments::download_response(file).ok(),
+        Ok(None) => ApiResponse::error("attachment not found")
+            .with_status(axum::http::StatusCode::NOT_FOUND)
+            .ok(),
+        Err(error) => api_error(error),
+    }
+}
+
 pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
         .routes(routes!(get))
         .route("/reply", axum::routing::post(reply))
         .route("/status", axum::routing::put(status))
+        .route(
+            "/attachments",
+            axum::routing::post(upload_attachments).layer(DefaultBodyLimit::max(64 * 1024 * 1024)),
+        )
+        .route(
+            "/attachments/{attachment}",
+            axum::routing::get(download_attachment),
+        )
         .with_state(state.clone())
 }

@@ -7,6 +7,15 @@ pub fn api_error(error: anyhow::Error) -> ApiResponseResult {
         "ticket not found" | "department unavailable" => StatusCode::NOT_FOUND,
         "ticket closed" | "invalid status transition" => StatusCode::CONFLICT,
         "server is not accessible to this user" => StatusCode::FORBIDDEN,
+        "attachments are disabled"
+        | "too many attachments"
+        | "attachment filename is missing"
+        | "attachment filename is invalid"
+        | "attachment type is not allowed"
+        | "attachment is too large"
+        | "no attachments provided"
+        | "message uuid is missing"
+        | "message not found" => StatusCode::BAD_REQUEST,
         _ => {
             tracing::error!(error = ?error, "support ticket operation failed");
             StatusCode::INTERNAL_SERVER_ERROR

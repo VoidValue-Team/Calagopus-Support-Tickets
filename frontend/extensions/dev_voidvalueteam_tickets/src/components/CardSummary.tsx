@@ -1,27 +1,25 @@
 import { Group, Text } from '@mantine/core';
-import { axiosInstance } from '@/api/axios.ts';
 import { useResource } from '@/plugins/useResource.ts';
-
-interface Stats {
-  open: number;
-  urgent: number;
-  sla_breached: number;
-}
-async function getStats() {
-  const { data } = await axiosInstance.get('/api/admin/extensions/dev.voidvalueteam.tickets/statistics');
-  return data.statistics as Stats;
-}
+import getStatistics from '../api/tickets/getStatistics.ts';
+import { useExtTranslations } from '../translations.ts';
 export default function CardSummary() {
+  const { t } = useExtTranslations();
   const { data } = useResource({
     queryKey: ['extensions', 'dev.voidvalueteam.tickets', 'statistics'],
-    queryFn: getStats,
+    queryFn: getStatistics,
     silent: true,
   });
   return (
     <Group gap='md'>
-      <Text size='sm'>Open: {data?.open ?? '—'}</Text>
-      <Text size='sm'>Urgent: {data?.urgent ?? '—'}</Text>
-      <Text size='sm'>SLA: {data?.sla_breached ?? '—'}</Text>
+      <Text size='sm'>
+        {t('statistics.open', {})}: {data?.open ?? '—'}
+      </Text>
+      <Text size='sm'>
+        {t('statistics.urgent', {})}: {data?.urgent ?? '—'}
+      </Text>
+      <Text size='sm'>
+        {t('statistics.sla', {})}: {data?.slaBreached ?? '—'}
+      </Text>
     </Group>
   );
 }

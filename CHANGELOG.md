@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.0 - 2026-08-22
+
+- Convierte la experiencia en una única cola de soporte global.
+- Añade selección opcional del servidor afectado al crear un ticket.
+- Hace que las filas sean pulsables y añade vista completa de conversación.
+- Permite responder, crear notas internas y actualizar, cerrar o reabrir estados según el scope.
+- Muestra cliente, servidor y autores mediante nombres legibles sin migrar los tickets existentes.
+- Retira la sección duplicada de soporte dentro de cada servidor.
+- Corrige la selección de servidores para administradores sin servidores propios.
+- Añade categorías de tickets abiertos, cerrados y todos, además de estadísticas de cola.
+- Añade adjuntos privados con límites de tipo, tamaño y cantidad.
+- Añade borrado permanente de tickets para administradores con permiso y confirmación explícita.
+
 ## 1.0.1 - 2026-08-22
 
 - Cambia la compatibilidad mínima a Calagopus Panel 1.1.4.

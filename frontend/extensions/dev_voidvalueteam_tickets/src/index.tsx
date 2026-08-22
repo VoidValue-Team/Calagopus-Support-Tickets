@@ -5,7 +5,6 @@ import CardSummary from './components/CardSummary.tsx';
 import AccountTicketsPage from './pages/AccountTicketsPage.tsx';
 import AdminTicketsPage from './pages/AdminTicketsPage.tsx';
 import ConfigurationPage from './pages/ConfigurationPage.tsx';
-import ServerTicketsPage from './pages/ServerTicketsPage.tsx';
 import { getExtTranslations } from './translations.ts';
 
 class SupportTicketsExtension extends Extension {
@@ -18,28 +17,20 @@ class SupportTicketsExtension extends Extension {
         .addAccountRoute({
           name: () => getExtTranslations().t('nav.support', {}),
           icon: faHeadset,
-          path: '/support',
+          path: '/support/*',
           element: AccountTicketsPage,
         })
         .addAdminRoute({
           name: () => getExtTranslations().t('nav.support', {}),
           icon: faHeadset,
-          path: '/support',
+          path: '/support/*',
           element: AdminTicketsPage,
-          permission: 'support.read',
-        })
-        .addServerRoute({
-          name: () => getExtTranslations().t('nav.support', {}),
-          icon: faHeadset,
-          path: '/support',
-          element: ServerTicketsPage,
           permission: 'support.read',
         }),
     );
     ctx.extensionRegistry.permissionIcons
       .addUserPermissionIcon('tickets', <FontAwesomeIcon icon={faHeadset} />)
-      .addAdminPermissionIcon('support', <FontAwesomeIcon icon={faHeadset} />)
-      .addServerPermissionIcon('support', <FontAwesomeIcon icon={faHeadset} />);
+      .addAdminPermissionIcon('support', <FontAwesomeIcon icon={faHeadset} />);
   }
 }
 export default new SupportTicketsExtension();
