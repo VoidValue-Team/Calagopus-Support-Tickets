@@ -19,6 +19,7 @@
 - Hace dinámicos los formularios de usuario según la configuración de prioridad, departamento predeterminado y límites/tipos de adjuntos.
 - Aplica el periodo de reapertura configurado y comprueba el propietario antes de cambiar el estado de un ticket de usuario.
 - Añade borrado permanente de tickets para administradores con permiso y confirmación explícita.
+- Corrige una excepción de Zod al cargar la extensión que podía dejar todo el panel en blanco.
 
 ## 1.0.1 - 2026-08-22
 
