@@ -13,6 +13,11 @@
 - Añade adjuntos privados con límites de tipo, tamaño y cantidad.
 - Corrige la cabecera multipart para que el navegador genere el boundary de cada subida.
 - Añade selector de agentes y valida que solo se asignen miembros elegibles del equipo de soporte.
+- Permite editar asunto, departamento, prioridad y servidor afectado con permisos granulares e historial.
+- Amplía la configuración para editar todas las opciones generales, ciclo de vida, adjuntos, notificaciones y política de acceso.
+- Añade gestión completa de departamentos: crear, editar, ordenar, activar y eliminar con protecciones de integridad.
+- Hace dinámicos los formularios de usuario según la configuración de prioridad, departamento predeterminado y límites/tipos de adjuntos.
+- Aplica el periodo de reapertura configurado y comprueba el propietario antes de cambiar el estado de un ticket de usuario.
 - Añade borrado permanente de tickets para administradores con permiso y confirmación explícita.
 
 ## 1.0.1 - 2026-08-22

@@ -137,6 +137,25 @@ pub struct SupportAgent {
     pub username: String,
 }
 
+#[derive(Clone, Debug, FromRow, Serialize, ToSchema)]
+pub struct SupportServer {
+    pub uuid: Uuid,
+    pub name: String,
+}
+
+#[derive(Clone, Debug, Serialize, ToSchema)]
+pub struct PublicSettings {
+    pub enabled: bool,
+    pub allow_user_priority: bool,
+    pub allow_reopen: bool,
+    pub reopen_period_days: u32,
+    pub default_department: Option<Uuid>,
+    pub attachments_enabled: bool,
+    pub attachment_max_bytes: u64,
+    pub attachment_max_files: u32,
+    pub allowed_mime_types: Vec<String>,
+}
+
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub struct TicketDetail {
     #[serde(flatten)]
@@ -180,6 +199,19 @@ pub struct StatusPayload {
 pub struct AssignPayload {
     #[garde(skip)]
     pub staff_uuid: Option<Uuid>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct EditTicketPayload {
+    #[garde(length(chars, min = 3, max = 180))]
+    #[schema(min_length = 3, max_length = 180)]
+    pub subject: String,
+    #[garde(skip)]
+    pub department_uuid: Uuid,
+    #[garde(skip)]
+    pub priority: TicketPriority,
+    #[garde(skip)]
+    pub server_uuid: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]

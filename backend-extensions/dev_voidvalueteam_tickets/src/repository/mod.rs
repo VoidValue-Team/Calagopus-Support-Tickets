@@ -1,5 +1,6 @@
 use crate::models::*;
 use chrono::{Duration, Utc};
+use serde::Serialize;
 use shared::State;
 use sqlx::{Postgres, QueryBuilder};
 use uuid::Uuid;
@@ -73,6 +74,14 @@ pub async fn list_agents(state: &State) -> anyhow::Result<Vec<SupportAgent>> {
     .await?)
 }
 
+pub async fn list_support_servers(state: &State) -> anyhow::Result<Vec<SupportServer>> {
+    Ok(
+        sqlx::query_as::<_, SupportServer>("SELECT uuid,name FROM servers ORDER BY name LIMIT 500")
+            .fetch_all(state.database.read())
+            .await?,
+    )
+}
+
 pub async fn create_ticket(
     state: &State,
     user_uuid: Uuid,
@@ -120,18 +129,22 @@ pub async fn create_ticket(
         }
     }
 
-    let number: i64 = sqlx::query_scalar("SELECT nextval('dev_voidvalueteam_tickets_number_seq')")
-        .fetch_one(&mut *tx)
-        .await?;
     let settings = state.settings.get().await?;
     let ext: &crate::settings::ExtensionSettingsData = settings.find_extension_settings()?;
-    let code = format!("{}-{number}", ext.ticket_prefix);
+    if !ext.enabled {
+        anyhow::bail!("support is disabled");
+    }
+    let ticket_prefix = ext.ticket_prefix.clone();
     let priority = if ext.allow_user_priority {
         payload.priority.unwrap_or(department.default_priority)
     } else {
         department.default_priority
     };
     drop(settings);
+    let number: i64 = sqlx::query_scalar("SELECT nextval('dev_voidvalueteam_tickets_number_seq')")
+        .fetch_one(&mut *tx)
+        .await?;
+    let code = format!("{ticket_prefix}-{number}");
     let uuid = Uuid::new_v4();
     let now = Utc::now();
     let first_due = now + Duration::minutes(i64::from(department.first_response_sla_minutes));
@@ -527,17 +540,39 @@ pub async fn update_status(
     scope: TicketScope,
     next: TicketStatus,
     reopen_allowed: bool,
+    reopen_period_days: Option<u32>,
 ) -> anyhow::Result<TicketDetail> {
+    #[derive(sqlx::FromRow)]
+    struct StatusRow {
+        status: TicketStatus,
+        user_uuid: Uuid,
+        terminal_at: Option<chrono::DateTime<Utc>>,
+    }
     let mut tx = state.database.write().begin().await?;
-    let current: TicketStatus = sqlx::query_scalar(
-        "SELECT status FROM dev_voidvalueteam_tickets_tickets WHERE uuid=$1 FOR UPDATE",
+    let row = sqlx::query_as::<_, StatusRow>(
+        "SELECT status,user_uuid,COALESCE(closed_at,resolved_at) AS terminal_at FROM dev_voidvalueteam_tickets_tickets WHERE uuid=$1 FOR UPDATE",
     )
     .bind(ticket_uuid)
     .fetch_optional(&mut *tx)
     .await?
     .ok_or_else(|| anyhow::anyhow!("ticket not found"))?;
+    if matches!(scope, TicketScope::User(user_uuid) if user_uuid != row.user_uuid) {
+        anyhow::bail!("ticket not found");
+    }
+    let current = row.status;
     if !current.can_transition_to(next, reopen_allowed) {
         anyhow::bail!("invalid status transition");
+    }
+    if matches!(current, TicketStatus::Resolved | TicketStatus::Closed)
+        && next == TicketStatus::Open
+        && reopen_period_days.is_some_and(|days| {
+            days == 0
+                || row
+                    .terminal_at
+                    .is_some_and(|closed| closed < Utc::now() - Duration::days(i64::from(days)))
+        })
+    {
+        anyhow::bail!("reopen period expired");
     }
     sqlx::query(
         r#"UPDATE dev_voidvalueteam_tickets_tickets SET status=$2,updated_at=now(),
@@ -605,6 +640,99 @@ pub async fn assign(
         Some(actor_uuid),
         "ticket.assignment.updated",
         serde_json::json!({"staff_uuid":staff_uuid}),
+    )
+    .await?;
+    tx.commit().await?;
+    get_ticket(state, ticket_uuid, TicketScope::Admin, true)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("ticket not found"))
+}
+
+pub async fn edit_ticket(
+    state: &State,
+    ticket_uuid: Uuid,
+    actor_uuid: Uuid,
+    payload: EditTicketPayload,
+) -> anyhow::Result<TicketDetail> {
+    #[derive(sqlx::FromRow, Serialize)]
+    struct ExistingTicket {
+        subject: String,
+        department_uuid: Uuid,
+        priority: TicketPriority,
+        server_uuid: Option<Uuid>,
+        created_at: chrono::DateTime<Utc>,
+    }
+
+    if payload.subject.trim().chars().count() < 3 {
+        anyhow::bail!("ticket subject is too short");
+    }
+    let mut tx = state.database.write().begin().await?;
+    let existing = sqlx::query_as::<_, ExistingTicket>(
+        r#"SELECT subject,department_uuid,priority,server_uuid,created_at
+           FROM dev_voidvalueteam_tickets_tickets WHERE uuid=$1 FOR UPDATE"#,
+    )
+    .bind(ticket_uuid)
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or_else(|| anyhow::anyhow!("ticket not found"))?;
+    let department = sqlx::query_as::<_, Department>(
+        r#"SELECT uuid,name,description,enabled,position,default_priority,
+                  first_response_sla_minutes,resolution_sla_minutes,autoresponse,
+                  allow_server_access,notification_enabled
+           FROM dev_voidvalueteam_tickets_departments
+           WHERE uuid=$1 AND (enabled OR uuid=$2)"#,
+    )
+    .bind(payload.department_uuid)
+    .bind(existing.department_uuid)
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or_else(|| anyhow::anyhow!("department unavailable"))?;
+    if let Some(server_uuid) = payload.server_uuid {
+        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM servers WHERE uuid=$1)")
+            .bind(server_uuid)
+            .fetch_one(&mut *tx)
+            .await?;
+        if !exists {
+            anyhow::bail!("server is not accessible to this user");
+        }
+    }
+    let first_due =
+        existing.created_at + Duration::minutes(i64::from(department.first_response_sla_minutes));
+    let resolution_due =
+        existing.created_at + Duration::minutes(i64::from(department.resolution_sla_minutes));
+    let subject = payload.subject.trim();
+    sqlx::query(
+        r#"UPDATE dev_voidvalueteam_tickets_tickets SET
+             subject=$2,department_uuid=$3,priority=$4,server_uuid=$5,
+             first_response_due_at=$6,resolution_due_at=$7,
+             first_response_sla_breached=(first_staff_reply_at IS NULL AND $6 < now()),
+             resolution_sla_breached=(status NOT IN ('resolved','closed') AND $7 < now()),
+             updated_at=now()
+           WHERE uuid=$1"#,
+    )
+    .bind(ticket_uuid)
+    .bind(subject)
+    .bind(payload.department_uuid)
+    .bind(payload.priority)
+    .bind(payload.server_uuid)
+    .bind(first_due)
+    .bind(resolution_due)
+    .execute(&mut *tx)
+    .await?;
+    add_history_tx(
+        &mut tx,
+        ticket_uuid,
+        Some(actor_uuid),
+        "ticket.properties.updated",
+        serde_json::json!({
+            "before": existing,
+            "after": {
+                "subject": subject,
+                "department_uuid": payload.department_uuid,
+                "priority": payload.priority,
+                "server_uuid": payload.server_uuid,
+            }
+        }),
     )
     .await?;
     tx.commit().await?;

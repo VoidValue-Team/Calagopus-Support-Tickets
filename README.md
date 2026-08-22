@@ -73,16 +73,16 @@ El resultado es `exported-extensions/dev_voidvalueteam_tickets.c7s.zip`.
 
 ## Configuración
 
-La tarjeta de configuración permite controlar el prefijo, reapertura, prioridades del usuario, correos, límites y MIME de adjuntos, SLA/autocierre y la preparación de acceso temporal. Los valores se guardan mediante `SettingsSerializeExt`; no se crean archivos de secretos.
+La tarjeta de configuración permite controlar el estado global, prefijo, departamento predeterminado, reapertura, prioridades del usuario, correos, límites y MIME de adjuntos, SLA/autocierre y la preparación de acceso temporal. Todos los campos de `ExtensionSettingsData` están expuestos y se guardan mediante `SettingsSerializeExt`; no se crean archivos de secretos.
 
-Los departamentos incluyen prioridad por defecto, SLA de primera respuesta y resolución, autorespuesta, orden y estado. La migración crea inicialmente `Technical Support`, `Billing`, `Sales`, `Abuse` y `Other`.
+Los departamentos se pueden crear, editar, reordenar, activar, desactivar y eliminar desde la misma tarjeta. Incluyen nombre, descripción, prioridad por defecto, SLA de primera respuesta y resolución, autorespuesta, orden, estado, notificaciones y política de acceso. No se puede eliminar un departamento en uso, el predeterminado ni el último activo. La migración crea inicialmente `Technical Support`, `Billing`, `Sales`, `Abuse` y `Other`.
 
 ## Permisos
 
 Grupos registrados:
 
 - Usuario: `tickets.create`, `tickets.read`, `tickets.reply`, `tickets.close`, `tickets.reopen`, `tickets.attachments`.
-- Administración: lectura, respuesta, notas internas, adjuntos, borrado permanente, asignación, cambio de estado/prioridad, departamentos, respuestas guardadas, estadísticas y settings.
+- Administración: lectura, respuesta, notas internas, adjuntos, borrado permanente, asignación, edición de propiedades, cambio de estado/prioridad, departamentos, respuestas guardadas, estadísticas y settings.
 
 La visibilidad de navegación está condicionada por permisos; no sustituye las comprobaciones del backend. Quick Actions no se registra en Calagopus 1.1.4 porque esa versión todavía no publica dicho registry.
 

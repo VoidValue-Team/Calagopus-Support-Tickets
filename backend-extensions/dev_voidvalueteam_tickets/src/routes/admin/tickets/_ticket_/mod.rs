@@ -1,6 +1,8 @@
 use crate::{
     errors::api_error,
-    models::{AssignPayload, MessageType, ReplyPayload, StatusPayload, TicketDetail},
+    models::{
+        AssignPayload, EditTicketPayload, MessageType, ReplyPayload, StatusPayload, TicketDetail,
+    },
     repository::{self, TicketScope},
 };
 use axum::extract::{DefaultBodyLimit, Multipart, Path};
@@ -94,6 +96,7 @@ async fn status(
         TicketScope::Admin,
         data.status,
         true,
+        None,
     )
     .await
     {
@@ -120,6 +123,61 @@ async fn assign(
             ApiResponse::new_serialized(Response { ticket }).ok()
         }
         Err(e) => api_error(e),
+    }
+}
+
+async fn properties(
+    state: GetState,
+    permissions: GetPermissionManager,
+    user: GetUser,
+    logger: GetAdminActivityLogger,
+    Path(ticket): Path<Uuid>,
+    shared::Payload(data): shared::Payload<EditTicketPayload>,
+) -> ApiResponseResult {
+    permissions.has_admin_permission("support.read")?;
+    if let Err(errors) = shared::utils::validate_data(&data) {
+        return ApiResponse::error(errors.join(", "))
+            .with_status(axum::http::StatusCode::BAD_REQUEST)
+            .ok();
+    }
+    let current = match repository::get_ticket(&state, ticket, TicketScope::Admin, true).await {
+        Ok(Some(current)) => current,
+        Ok(None) => {
+            return ApiResponse::error("ticket not found")
+                .with_status(axum::http::StatusCode::NOT_FOUND)
+                .ok();
+        }
+        Err(error) => return api_error(error),
+    };
+    if data.subject.trim() == current.ticket.subject
+        && data.server_uuid == current.ticket.server_uuid
+        && data.priority == current.ticket.priority
+        && data.department_uuid == current.ticket.department_uuid
+    {
+        return ApiResponse::new_serialized(Response { ticket: current }).ok();
+    }
+    if data.subject.trim() != current.ticket.subject
+        || data.server_uuid != current.ticket.server_uuid
+    {
+        permissions.has_admin_permission("support.edit")?;
+    }
+    if data.priority != current.ticket.priority {
+        permissions.has_admin_permission("support.update-priority")?;
+    }
+    if data.department_uuid != current.ticket.department_uuid {
+        permissions.has_admin_permission("support.move-department")?;
+    }
+    match repository::edit_ticket(&state, ticket, user.uuid, data).await {
+        Ok(ticket) => {
+            logger
+                .log(
+                    "support:ticket.properties.update",
+                    serde_json::json!({"ticket_uuid":ticket.ticket.uuid}),
+                )
+                .await;
+            ApiResponse::new_serialized(Response { ticket }).ok()
+        }
+        Err(error) => api_error(error),
     }
 }
 
@@ -198,6 +256,7 @@ pub fn router(state: &State) -> OpenApiRouter<State> {
         .routes(routes!(reply))
         .routes(routes!(status))
         .routes(routes!(assign))
+        .route("/properties", axum::routing::put(properties))
         .route("/", axum::routing::delete(delete))
         .route(
             "/attachments",

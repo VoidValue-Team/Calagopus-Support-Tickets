@@ -86,6 +86,11 @@ async fn status(
     Path(ticket): Path<Uuid>,
     shared::Payload(data): shared::Payload<StatusPayload>,
 ) -> ApiResponseResult {
+    if !matches!(data.status, TicketStatus::Open | TicketStatus::Closed) {
+        return ApiResponse::error("customers can only close or reopen tickets")
+            .with_status(axum::http::StatusCode::BAD_REQUEST)
+            .ok();
+    }
     let permission = if data.status == TicketStatus::Closed {
         "tickets.close"
     } else {
@@ -98,7 +103,9 @@ async fn status(
     };
     let ext: Result<&crate::settings::ExtensionSettingsData, _> =
         settings.find_extension_settings();
-    let reopen = ext.map(|v| v.allow_reopen).unwrap_or(false);
+    let (reopen, reopen_period_days) = ext
+        .map(|settings| (settings.allow_reopen, settings.reopen_period_days))
+        .unwrap_or((false, 0));
     drop(settings);
     match repository::update_status(
         &state,
@@ -107,6 +114,7 @@ async fn status(
         TicketScope::User(user.uuid),
         data.status,
         reopen,
+        Some(reopen_period_days),
     )
     .await
     {

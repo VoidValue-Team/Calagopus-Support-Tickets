@@ -64,6 +64,22 @@ impl Default for ExtensionSettingsData {
     }
 }
 
+impl From<&ExtensionSettingsData> for crate::models::PublicSettings {
+    fn from(settings: &ExtensionSettingsData) -> Self {
+        Self {
+            enabled: settings.enabled,
+            allow_user_priority: settings.allow_user_priority,
+            allow_reopen: settings.allow_reopen,
+            reopen_period_days: settings.reopen_period_days,
+            default_department: settings.default_department,
+            attachments_enabled: settings.attachments_enabled,
+            attachment_max_bytes: settings.attachment_max_bytes,
+            attachment_max_files: settings.attachment_max_files,
+            allowed_mime_types: settings.allowed_mime_types.clone(),
+        }
+    }
+}
+
 #[async_trait::async_trait]
 impl SettingsSerializeExt for ExtensionSettingsData {
     async fn serialize(

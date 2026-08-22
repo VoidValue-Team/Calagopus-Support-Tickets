@@ -3,6 +3,8 @@ import { defineEnglishItem, defineTranslations } from 'shared';
 const translations = defineTranslations({
   items: { ticket: defineEnglishItem('Ticket', 'Tickets') },
   translations: {
+    common: { enabled: 'Enabled', disabled: 'Disabled' },
+    units: { days: 'days', minutes: 'minutes' },
     nav: { support: 'Support' },
     pages: {
       account: { title: 'Support tickets', subtitle: 'Create and track your support conversations.' },
@@ -27,6 +29,12 @@ const translations = defineTranslations({
       delete: 'Delete',
       deleteTicket: 'Delete ticket',
       deletePermanently: 'Delete permanently',
+      editTicket: 'Edit ticket',
+      saveChanges: 'Save changes',
+      edit: 'Edit',
+      createDepartment: 'Create department',
+      editDepartment: 'Edit department',
+      deleteDepartment: 'Delete department',
     },
     fields: {
       subject: 'Subject',
@@ -43,6 +51,18 @@ const translations = defineTranslations({
       unassigned: 'Unassigned',
       attachments: 'Attachments',
       attachmentsDescription: 'Up to 5 files of 10 MB: PNG, JPG, TXT, or PDF.',
+      attachmentsConfiguredDescription:
+        'Up to {count} files of {size} MB each. Accepted formats follow support settings.',
+      name: 'Name',
+      position: 'Display order',
+      description: 'Description',
+      defaultPriority: 'Default priority',
+      firstResponseSla: 'First response SLA (minutes)',
+      resolutionSla: 'Resolution SLA (minutes)',
+      autoresponse: 'Automatic response',
+      enabled: 'Enabled',
+      allowServerAccess: 'Allow temporary server access',
+      notificationEnabled: 'Department notifications',
     },
     columns: {
       code: 'Code',
@@ -86,14 +106,77 @@ const translations = defineTranslations({
       ticketCreatedWithoutAttachments: 'Ticket created, but its files could not be attached.',
       replySentWithoutAttachments: 'Reply sent, but its files could not be attached.',
       assignmentUpdated: 'Assigned agent updated.',
+      ticketUpdated: 'Ticket properties updated.',
+      settingsSaved: 'Support settings saved.',
+      departmentCreated: 'Department created.',
+      departmentUpdated: 'Department updated.',
+      departmentDeleted: 'Department deleted.',
     },
     errors: {
       ticketUnavailable: 'The ticket could not be loaded or is no longer available.',
       createdMessageUnavailable: 'The message could not be identified for attachment upload.',
+      tooManyFiles: 'Too many files selected for the configured attachment limit.',
+      attachmentTooLarge: 'At least one file exceeds the configured size limit.',
+      attachmentTypeNotAllowed: 'At least one file format is not allowed by support settings.',
     },
     warnings: {
       deleteTicket:
         'Ticket {code}, its entire conversation, and its files will be permanently deleted. This cannot be undone.',
+      deleteDepartment:
+        'Department {name} will be permanently deleted. Departments in use, the default department, and the last enabled department cannot be deleted.',
+    },
+    configuration: {
+      general: {
+        title: 'General',
+        description: 'Control availability, ticket numbering, and the initial department.',
+      },
+      lifecycle: {
+        title: 'Ticket lifecycle',
+        description: 'Configure reopening and automatic closure rules.',
+      },
+      notifications: {
+        title: 'Email notifications',
+        description: 'Choose which participants receive ticket email updates.',
+      },
+      attachments: {
+        title: 'Attachments',
+        description: 'Set global upload limits and accepted file formats.',
+      },
+      access: {
+        title: 'Temporary support access',
+        description: 'Define the duration and permission set for server access requests.',
+        warning:
+          'This release stores the access policy, but automatic permission granting is still preparatory. Enabling it does not grant access by itself.',
+      },
+      departments: {
+        title: 'Departments',
+        description: 'Create, reorder, enable, edit, or delete support departments.',
+        noDescription: 'No description.',
+        summary: 'Default {priority} · First response {first} min · Resolution {resolution} min',
+      },
+      enabled: 'Enable support tickets',
+      ticketPrefix: 'Ticket prefix',
+      defaultDepartment: 'Default department',
+      defaultDepartmentDescription: 'Used when a department is not explicitly selected.',
+      allowUserPriority: 'Allow customers to select priority',
+      allowReopen: 'Allow customers to reopen tickets',
+      reopenPeriodDays: 'Reopen period',
+      autoCloseEnabled: 'Enable automatic closure',
+      inactivityDays: 'Days before marking an inactive ticket resolved',
+      finalCloseDelayDays: 'Days between resolution and final closure',
+      customerEmails: 'Customer email notifications',
+      staffEmails: 'Staff email notifications',
+      attachmentsEnabled: 'Enable attachments',
+      attachmentMaxBytes: 'Maximum size per file',
+      attachmentMaxFiles: 'Maximum files per message',
+      allowedMimeTypes: 'Allowed MIME types',
+      allowedMimeTypesDescription: 'Add the exact MIME type reported by the uploaded file.',
+      supportAccessEnabled: 'Enable temporary support access requests',
+      revokeAccessOnResolved: 'Revoke temporary access when resolved',
+      supportAccessDefaultMinutes: 'Default access duration',
+      supportAccessMaxMinutes: 'Maximum access duration',
+      supportAccessPermissions: 'Temporary access permissions',
+      supportAccessPermissionsDescription: 'Permissions that a future approved access request may grant.',
     },
     empty: 'No support tickets found.',
     quickActions: {

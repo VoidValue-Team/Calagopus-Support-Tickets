@@ -1,6 +1,9 @@
 use crate::{
     errors::api_error,
-    models::{CreateTicketPayload, Department, ListQuery, Page, TicketDetail, TicketSummary},
+    models::{
+        CreateTicketPayload, Department, ListQuery, Page, PublicSettings, TicketDetail,
+        TicketSummary,
+    },
     repository::{self, TicketScope},
 };
 use axum::extract::Query;
@@ -29,6 +32,10 @@ struct TicketResponse {
 #[derive(Serialize, ToSchema)]
 struct DepartmentsResponse {
     departments: Vec<Department>,
+}
+#[derive(Serialize, ToSchema)]
+struct ConfigurationResponse {
+    configuration: PublicSettings,
 }
 
 #[utoipa::path(get,path="/",params(ListQuery),responses((status=OK,body=inline(TicketsResponse))))]
@@ -83,11 +90,29 @@ async fn departments(state: GetState, permissions: GetPermissionManager) -> ApiR
     }
 }
 
+async fn configuration(state: GetState, permissions: GetPermissionManager) -> ApiResponseResult {
+    permissions.has_user_permission("tickets.read")?;
+    let settings = match state.settings.get().await {
+        Ok(settings) => settings,
+        Err(error) => return api_error(error),
+    };
+    let extension: &crate::settings::ExtensionSettingsData =
+        match settings.find_extension_settings() {
+            Ok(extension) => extension,
+            Err(error) => return api_error(error),
+        };
+    ApiResponse::new_serialized(ConfigurationResponse {
+        configuration: extension.into(),
+    })
+    .ok()
+}
+
 pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
         .routes(routes!(get))
         .routes(routes!(post))
         .route("/departments", axum::routing::get(departments))
+        .route("/configuration", axum::routing::get(configuration))
         .nest("/{ticket}", _ticket_::router(state))
         .with_state(state.clone())
 }
