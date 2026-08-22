@@ -3,7 +3,7 @@ use crate::{
     models::{AssignPayload, MessageType, ReplyPayload, StatusPayload, TicketDetail},
     repository::{self, TicketScope},
 };
-use axum::extract::Path;
+use axum::extract::{DefaultBodyLimit, Multipart, Path};
 use serde::Serialize;
 use shared::{
     GetState, State,
@@ -122,11 +122,90 @@ async fn assign(
         Err(e) => api_error(e),
     }
 }
+
+async fn upload_attachments(
+    state: GetState,
+    permissions: GetPermissionManager,
+    user: GetUser,
+    logger: GetAdminActivityLogger,
+    Path(ticket): Path<Uuid>,
+    multipart: Multipart,
+) -> ApiResponseResult {
+    permissions.has_admin_permission("support.attachments")?;
+    match crate::routes::attachments::upload(
+        &state,
+        ticket,
+        user.uuid,
+        TicketScope::Admin,
+        multipart,
+    )
+    .await
+    {
+        Ok(ticket) => {
+            logger
+                .log(
+                    "support:ticket.attachments.add",
+                    serde_json::json!({"ticket_uuid":ticket.ticket.uuid}),
+                )
+                .await;
+            ApiResponse::new_serialized(Response { ticket }).ok()
+        }
+        Err(error) => api_error(error),
+    }
+}
+
+async fn download_attachment(
+    state: GetState,
+    permissions: GetPermissionManager,
+    Path((ticket, attachment)): Path<(Uuid, Uuid)>,
+) -> ApiResponseResult {
+    permissions.has_admin_permission("support.attachments")?;
+    match repository::download_attachment(&state, ticket, attachment, TicketScope::Admin).await {
+        Ok(Some(file)) => crate::routes::attachments::download_response(file).ok(),
+        Ok(None) => ApiResponse::error("attachment not found")
+            .with_status(axum::http::StatusCode::NOT_FOUND)
+            .ok(),
+        Err(error) => api_error(error),
+    }
+}
+
+async fn delete(
+    state: GetState,
+    permissions: GetPermissionManager,
+    logger: GetAdminActivityLogger,
+    Path(ticket): Path<Uuid>,
+) -> ApiResponseResult {
+    permissions.has_admin_permission("support.delete")?;
+    match repository::delete_ticket(&state, ticket).await {
+        Ok(Some(code)) => {
+            logger
+                .log(
+                    "support:ticket.delete",
+                    serde_json::json!({"ticket_uuid":ticket,"ticket_code":code}),
+                )
+                .await;
+            ApiResponse::new_serialized(serde_json::json!({})).ok()
+        }
+        Ok(None) => ApiResponse::error("ticket not found")
+            .with_status(axum::http::StatusCode::NOT_FOUND)
+            .ok(),
+        Err(error) => api_error(error),
+    }
+}
 pub fn router(state: &State) -> OpenApiRouter<State> {
     OpenApiRouter::new()
         .routes(routes!(get))
         .routes(routes!(reply))
         .routes(routes!(status))
         .routes(routes!(assign))
+        .route("/", axum::routing::delete(delete))
+        .route(
+            "/attachments",
+            axum::routing::post(upload_attachments).layer(DefaultBodyLimit::max(64 * 1024 * 1024)),
+        )
+        .route(
+            "/attachments/{attachment}",
+            axum::routing::get(download_attachment),
+        )
         .with_state(state.clone())
 }

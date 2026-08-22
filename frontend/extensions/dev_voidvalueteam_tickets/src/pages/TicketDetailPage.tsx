@@ -1,6 +1,6 @@
-import { faArrowLeft, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faDownload, faPaperclip, faPaperPlane, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Badge, Group, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Badge, FileInput, Group, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { httpErrorToHuman } from '@/api/axios.ts';
@@ -11,10 +11,13 @@ import AdminContentContainer from '@/elements/containers/AdminContentContainer.t
 import Select from '@/elements/input/Select.tsx';
 import Switch from '@/elements/input/Switch.tsx';
 import TextArea from '@/elements/input/TextArea.tsx';
+import ConfirmationModal from '@/elements/modals/ConfirmationModal.tsx';
 import Spinner from '@/elements/Spinner.tsx';
 import { useAdminCan } from '@/plugins/usePermissions.ts';
 import { useResource } from '@/plugins/useResource.ts';
 import { useToast } from '@/providers/ToastProvider.tsx';
+import { downloadAttachment, uploadAttachments } from '../api/tickets/attachments.ts';
+import deleteTicket from '../api/tickets/deleteTicket.ts';
 import getTicket from '../api/tickets/getTicket.ts';
 import type { TicketScope } from '../api/tickets/getTickets.ts';
 import replyTicket from '../api/tickets/replyTicket.ts';
@@ -32,6 +35,12 @@ const statusColor = (status: TicketStatus) => {
   return 'blue';
 };
 
+const readableSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
   const { t } = useExtTranslations();
   const { addToast } = useToast();
@@ -39,12 +48,16 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
   const { ticket = '' } = useParams();
   const [message, setMessage] = useState('');
   const [internalNote, setInternalNote] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [deleteOpened, setDeleteOpened] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<TicketStatus>('open');
   const [submitting, setSubmitting] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const canReply = useAdminCan('support.reply');
   const canInternalNote = useAdminCan('support.internal-note');
   const canUpdateStatus = useAdminCan('support.update-status');
+  const canAttachments = useAdminCan('support.attachments');
+  const canDelete = useAdminCan('support.delete');
   const resource = useResource({
     queryKey: ['extensions', 'dev.voidvalueteam.tickets', 'ticket', scope, ticket],
     queryFn: () => getTicket(scope, ticket),
@@ -74,13 +87,47 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
 
   const submitReply = async () => {
     if (!message.trim()) return;
-    const sent = await mutate(
-      () => replyTicket(scope, ticket, { message: message.trim(), internalNote: scope === 'admin' && internalNote }),
-      t('notices.replySent', {}),
-    );
-    if (sent) {
-      setMessage('');
-      setInternalNote(false);
+    setSubmitting(true);
+    setMutationError(null);
+    let reply;
+    try {
+      reply = await replyTicket(scope, ticket, {
+        message: message.trim(),
+        internalNote: scope === 'admin' && internalNote,
+      });
+    } catch (error) {
+      setMutationError(httpErrorToHuman(error));
+      setSubmitting(false);
+      return;
+    }
+    let attachmentError: unknown;
+    try {
+      if (files.length) {
+        const expectedType = scope === 'admin' ? (internalNote ? 'internal_note' : 'staff') : 'customer';
+        const createdMessage = [...reply.messages]
+          .reverse()
+          .find((entry) => entry.messageType === expectedType && entry.body === message.trim());
+        if (!createdMessage) throw new Error(t('errors.createdMessageUnavailable', {}));
+        await uploadAttachments(scope, ticket, createdMessage.uuid, files);
+      }
+    } catch (error) {
+      attachmentError = error;
+    }
+    try {
+      await resource.refetch();
+    } catch (error) {
+      setMutationError(httpErrorToHuman(error));
+    }
+    setSubmitting(false);
+    setMessage('');
+    setInternalNote(false);
+    setFiles([]);
+    if (attachmentError) {
+      const error = `${t('notices.replySentWithoutAttachments', {})} ${httpErrorToHuman(attachmentError)}`;
+      setMutationError(error);
+      addToast(error, 'warning');
+    } else {
+      addToast(t('notices.replySent', {}), 'success');
     }
   };
 
@@ -93,7 +140,7 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
       </Card>
     ) : (
       <Stack>
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3, xl: 6 }}>
           <Card>
             <Text size='xs' c='dimmed'>
               {t('fields.status', {})}
@@ -119,6 +166,23 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
               {t('fields.server', {})}
             </Text>
             <Text mt='xs'>{detail.serverName ?? t('fields.noServer', {})}</Text>
+          </Card>
+          <Card>
+            <Text size='xs' c='dimmed'>
+              {t('fields.priority', {})}
+            </Text>
+            <Badge
+              mt='xs'
+              color={detail.priority === 'urgent' ? 'red' : detail.priority === 'high' ? 'orange' : 'blue'}
+            >
+              {t(`priorities.${detail.priority}`, {})}
+            </Badge>
+          </Card>
+          <Card>
+            <Text size='xs' c='dimmed'>
+              {t('fields.assignedTo', {})}
+            </Text>
+            <Text mt='xs'>{detail.assignedStaffName ?? t('fields.unassigned', {})}</Text>
           </Card>
         </SimpleGrid>
 
@@ -157,6 +221,35 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
               <Text mt='md' style={{ whiteSpace: 'pre-wrap' }}>
                 {entry.body}
               </Text>
+              {detail.attachments.some((attachment) => attachment.messageUuid === entry.uuid) && (
+                <Stack gap='xs' mt='md'>
+                  <Text size='xs' c='dimmed' fw={600}>
+                    <FontAwesomeIcon icon={faPaperclip} className='mr-1' />
+                    {t('fields.attachments', {})}
+                  </Text>
+                  <Group gap='xs'>
+                    {detail.attachments
+                      .filter((attachment) => attachment.messageUuid === entry.uuid)
+                      .map((attachment) => (
+                        <Button
+                          key={attachment.uuid}
+                          variant='default'
+                          size='compact-sm'
+                          leftSection={<FontAwesomeIcon icon={faDownload} />}
+                          onClick={async () => {
+                            try {
+                              await downloadAttachment(scope, ticket, attachment);
+                            } catch (error) {
+                              addToast(httpErrorToHuman(error), 'error');
+                            }
+                          }}
+                        >
+                          {attachment.originalFilename} · {readableSize(attachment.sizeBytes)}
+                        </Button>
+                      ))}
+                  </Group>
+                </Stack>
+              )}
             </Card>
           ))}
         </Stack>
@@ -182,6 +275,17 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
                   description={t('actions.internalNoteDescription', {})}
                   checked={internalNote}
                   onChange={(event) => setInternalNote(event.currentTarget.checked)}
+                />
+              )}
+              {(scope === 'account' || canAttachments) && (
+                <FileInput
+                  label={t('fields.attachments', {})}
+                  description={t('fields.attachmentsDescription', {})}
+                  accept='image/png,image/jpeg,text/plain,application/pdf'
+                  multiple
+                  clearable
+                  value={files}
+                  onChange={(value) => setFiles(value ?? [])}
                 />
               )}
               <Group justify='flex-end'>
@@ -248,22 +352,55 @@ export default function TicketDetailPage({ scope }: { scope: TicketScope }) {
 
   const title = detail ? `${detail.code} · ${detail.subject}` : t('pages.detail.title', {});
   const contentRight = (
-    <Button
-      variant='default'
-      leftSection={<FontAwesomeIcon icon={faArrowLeft} />}
-      onClick={() => navigate(`${scope === 'admin' ? '/admin' : '/account'}/support`)}
-    >
-      {t('actions.backToTickets', {})}
-    </Button>
+    <Group>
+      {scope === 'admin' && canDelete && detail && (
+        <Button
+          color='red'
+          variant='light'
+          leftSection={<FontAwesomeIcon icon={faTrash} />}
+          onClick={() => setDeleteOpened(true)}
+        >
+          {t('actions.delete', {})}
+        </Button>
+      )}
+      <Button
+        variant='default'
+        leftSection={<FontAwesomeIcon icon={faArrowLeft} />}
+        onClick={() => navigate(`${scope === 'admin' ? '/admin' : '/account'}/support`)}
+      >
+        {t('actions.backToTickets', {})}
+      </Button>
+    </Group>
   );
 
-  return scope === 'admin' ? (
-    <AdminContentContainer title={title} subtitle={t('pages.detail.subtitle', {})} contentRight={contentRight}>
-      {content}
-    </AdminContentContainer>
-  ) : (
-    <AccountContentContainer title={title} subtitle={t('pages.detail.subtitle', {})} contentRight={contentRight}>
-      {content}
-    </AccountContentContainer>
+  const page =
+    scope === 'admin' ? (
+      <AdminContentContainer title={title} subtitle={t('pages.detail.subtitle', {})} contentRight={contentRight}>
+        {content}
+      </AdminContentContainer>
+    ) : (
+      <AccountContentContainer title={title} subtitle={t('pages.detail.subtitle', {})} contentRight={contentRight}>
+        {content}
+      </AccountContentContainer>
+    );
+
+  return (
+    <>
+      {page}
+      <ConfirmationModal
+        opened={deleteOpened}
+        onClose={() => setDeleteOpened(false)}
+        title={t('actions.deleteTicket', {})}
+        confirm={t('actions.deletePermanently', {})}
+        onConfirmed={async () => {
+          await deleteTicket(ticket);
+          addToast(t('notices.ticketDeleted', {}), 'success');
+          setDeleteOpened(false);
+          navigate('/admin/support');
+        }}
+      >
+        <Text>{t('warnings.deleteTicket', { code: detail?.code ?? '' })}</Text>
+      </ConfirmationModal>
+    </>
   );
 }

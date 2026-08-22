@@ -8,10 +8,11 @@ El paquete se identifica como `dev.voidvalueteam.tickets` y requiere **Calagopus
 
 El código se valida contra el commit de Calagopus `adc41d62ad40b0dc8afd5ffc089d1aa441dc0563` (versión 1.1.4). La integración usa exclusivamente los registries, extractors, permisos, settings, plantillas de correo, tareas y rutas publicados por Calagopus.
 
-Dos funciones quedan deliberadamente desactivadas hasta que el core exponga una API segura completa:
+El acceso temporal a servidores queda deliberadamente desactivado hasta que el core exponga una API segura completa:
 
-- **Descarga privada de adjuntos:** el storage público permite guardar, borrar y generar URLs, pero no ofrece lectura privada portable tanto para filesystem como para S3. La base de datos y los límites están preparados, pero no se publica un endpoint inseguro.
 - **Aplicación de acceso temporal a servidores:** crear un `ServerSubuser` directamente no sincroniza por sí solo los permisos con Wings. Las tablas y caducidad están preparadas y `support_access_enabled` vale `false`; no se crea un ACL paralelo ni se imitan internals del core.
+
+Los adjuntos se guardan de forma privada en PostgreSQL y solo se sirven después de volver a comprobar el acceso al ticket. No se generan URLs públicas.
 
 ## Arquitectura
 
@@ -23,11 +24,11 @@ Las consultas de cliente se acotan siempre por `user_uuid` y las de administraci
 
 ## Instalación en Docker
 
-1. Descarga `dev_voidvalueteam_tickets.c7s.zip` desde Releases.
+1. Descarga `dist/dev_voidvalueteam_tickets.c7s.zip` desde este repositorio.
 2. Comprueba que el panel es 1.1.4+ y usa una imagen heavy.
 3. En Administration → Extensions, carga el paquete y aplica la build desde la interfaz.
 4. Revisa los permisos nuevos antes de conceder acceso a usuarios o subusuarios.
-5. Configura correo y storage con los mecanismos nativos del panel; esta extensión no gestiona credenciales propias.
+5. Configura el correo con los mecanismos nativos del panel; esta extensión no gestiona credenciales propias.
 
 La instalación/rebuild puede recrear el contenedor del panel. Programa esa operación según tu política de producción.
 
@@ -74,14 +75,14 @@ El resultado es `exported-extensions/dev_voidvalueteam_tickets.c7s.zip`.
 
 La tarjeta de configuración permite controlar el prefijo, reapertura, prioridades del usuario, correos, límites y MIME de adjuntos, SLA/autocierre y la preparación de acceso temporal. Los valores se guardan mediante `SettingsSerializeExt`; no se crean archivos de secretos.
 
-Los departamentos incluyen prioridad por defecto, SLA de primera respuesta y resolución, autorespuesta, orden y estado. La migración crea inicialmente `General`, `Billing` y `Technical Support`.
+Los departamentos incluyen prioridad por defecto, SLA de primera respuesta y resolución, autorespuesta, orden y estado. La migración crea inicialmente `Technical Support`, `Billing`, `Sales`, `Abuse` y `Other`.
 
 ## Permisos
 
 Grupos registrados:
 
-- Usuario: `tickets.create`, `tickets.read`, `tickets.reply`, `tickets.close`, `tickets.reopen`.
-- Administración: lectura, respuesta, notas internas, asignación, cambio de estado/prioridad, departamentos, respuestas guardadas, estadísticas y settings.
+- Usuario: `tickets.create`, `tickets.read`, `tickets.reply`, `tickets.close`, `tickets.reopen`, `tickets.attachments`.
+- Administración: lectura, respuesta, notas internas, adjuntos, borrado permanente, asignación, cambio de estado/prioridad, departamentos, respuestas guardadas, estadísticas y settings.
 
 La visibilidad de navegación está condicionada por permisos; no sustituye las comprobaciones del backend. Quick Actions no se registra en Calagopus 1.1.4 porque esa versión todavía no publica dicho registry.
 

@@ -26,6 +26,19 @@ pub enum TicketScope {
     Admin,
 }
 
+pub struct NewAttachment {
+    pub original_filename: String,
+    pub mime_type: String,
+    pub content: Vec<u8>,
+    pub sha256: String,
+}
+
+pub struct AttachmentDownload {
+    pub original_filename: String,
+    pub mime_type: String,
+    pub content: Vec<u8>,
+}
+
 pub async fn list_departments(
     state: &State,
     include_disabled: bool,
@@ -48,6 +61,7 @@ pub async fn create_ticket(
     state: &State,
     user_uuid: Uuid,
     payload: CreateTicketPayload,
+    can_access_all_servers: bool,
 ) -> anyhow::Result<TicketDetail> {
     let mut tx = state.database.write().begin().await?;
     let department = sqlx::query_as::<_, Department>(
@@ -65,20 +79,27 @@ pub async fn create_ticket(
     .ok_or_else(|| anyhow::anyhow!("department unavailable"))?;
 
     if let Some(server_uuid) = payload.server_uuid {
-        let owns_or_shares: bool = sqlx::query_scalar(
-            r#"
-          SELECT EXISTS(
-            SELECT 1 FROM servers s LEFT JOIN server_subusers su
-              ON su.server_uuid = s.uuid AND su.user_uuid = $2
-            WHERE s.uuid = $1 AND (s.owner_uuid = $2 OR su.user_uuid = $2)
-          )
-        "#,
-        )
-        .bind(server_uuid)
-        .bind(user_uuid)
-        .fetch_one(&mut *tx)
-        .await?;
-        if !owns_or_shares {
+        let accessible: bool = if can_access_all_servers {
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM servers WHERE uuid=$1)")
+                .bind(server_uuid)
+                .fetch_one(&mut *tx)
+                .await?
+        } else {
+            sqlx::query_scalar(
+                r#"
+              SELECT EXISTS(
+                SELECT 1 FROM servers s LEFT JOIN server_subusers su
+                  ON su.server_uuid = s.uuid AND su.user_uuid = $2
+                WHERE s.uuid = $1 AND (s.owner_uuid = $2 OR su.user_uuid = $2)
+              )
+            "#,
+            )
+            .bind(server_uuid)
+            .bind(user_uuid)
+            .fetch_one(&mut *tx)
+            .await?
+        };
+        if !accessible {
             anyhow::bail!("server is not accessible to this user");
         }
     }
@@ -172,6 +193,12 @@ pub async fn list_tickets(
         }
         TicketScope::Admin => {}
     }
+    if let Some(view) = query.view {
+        match view {
+            TicketView::Open => qb.push(" AND t.status NOT IN ('resolved','closed')"),
+            TicketView::Closed => qb.push(" AND t.status IN ('resolved','closed')"),
+        };
+    }
     if let Some(status) = query.status {
         qb.push(" AND t.status = ").push_bind(status);
     }
@@ -254,7 +281,160 @@ pub async fn get_ticket(
     .bind(include_internal)
     .fetch_all(state.database.read())
     .await?;
-    Ok(Some(TicketDetail { ticket, messages }))
+    let attachments = sqlx::query_as::<_, TicketAttachment>(
+        r#"
+      SELECT a.uuid,a.message_uuid,a.uploader_uuid,a.original_filename,a.mime_type,
+             a.size_bytes,a.sha256,a.created_at
+      FROM dev_voidvalueteam_tickets_attachments a
+      JOIN dev_voidvalueteam_tickets_messages m ON m.uuid=a.message_uuid
+      WHERE m.ticket_uuid=$1 AND a.deleted_at IS NULL
+        AND ($2 OR m.message_type <> 'internal_note')
+      ORDER BY a.created_at
+    "#,
+    )
+    .bind(uuid)
+    .bind(include_internal)
+    .fetch_all(state.database.read())
+    .await?;
+    Ok(Some(TicketDetail {
+        ticket,
+        messages,
+        attachments,
+    }))
+}
+
+pub async fn add_attachments(
+    state: &State,
+    ticket_uuid: Uuid,
+    message_uuid: Uuid,
+    uploader_uuid: Uuid,
+    scope: TicketScope,
+    files: Vec<NewAttachment>,
+    max_files: u32,
+) -> anyhow::Result<TicketDetail> {
+    let mut tx = state.database.write().begin().await?;
+    let owner: Uuid = sqlx::query_scalar(
+        "SELECT user_uuid FROM dev_voidvalueteam_tickets_tickets WHERE uuid=$1 FOR SHARE",
+    )
+    .bind(ticket_uuid)
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or_else(|| anyhow::anyhow!("ticket not found"))?;
+    if matches!(scope, TicketScope::User(id) if id != owner) {
+        anyhow::bail!("ticket not found");
+    }
+    let valid_message: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM dev_voidvalueteam_tickets_messages WHERE uuid=$1 AND ticket_uuid=$2 AND author_uuid=$3)",
+    )
+    .bind(message_uuid)
+    .bind(ticket_uuid)
+    .bind(uploader_uuid)
+    .fetch_one(&mut *tx)
+    .await?;
+    if !valid_message {
+        anyhow::bail!("message not found");
+    }
+    let existing: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM dev_voidvalueteam_tickets_attachments WHERE message_uuid=$1 AND deleted_at IS NULL",
+    )
+    .bind(message_uuid)
+    .fetch_one(&mut *tx)
+    .await?;
+    if existing + i64::try_from(files.len())? > i64::from(max_files) {
+        anyhow::bail!("too many attachments");
+    }
+    for file in files {
+        let uuid = Uuid::new_v4();
+        sqlx::query(
+            r#"INSERT INTO dev_voidvalueteam_tickets_attachments
+              (uuid,message_uuid,uploader_uuid,storage_path,original_filename,mime_type,size_bytes,sha256,content)
+              VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)"#,
+        )
+        .bind(uuid)
+        .bind(message_uuid)
+        .bind(uploader_uuid)
+        .bind(format!("database:{uuid}"))
+        .bind(file.original_filename)
+        .bind(file.mime_type)
+        .bind(i64::try_from(file.content.len())?)
+        .bind(file.sha256)
+        .bind(file.content)
+        .execute(&mut *tx)
+        .await?;
+    }
+    add_history_tx(
+        &mut tx,
+        ticket_uuid,
+        Some(uploader_uuid),
+        "ticket.attachments.added",
+        serde_json::json!({"message_uuid":message_uuid}),
+    )
+    .await?;
+    tx.commit().await?;
+    get_ticket(
+        state,
+        ticket_uuid,
+        scope,
+        matches!(scope, TicketScope::Admin),
+    )
+    .await?
+    .ok_or_else(|| anyhow::anyhow!("ticket not found"))
+}
+
+pub async fn download_attachment(
+    state: &State,
+    ticket_uuid: Uuid,
+    attachment_uuid: Uuid,
+    scope: TicketScope,
+) -> anyhow::Result<Option<AttachmentDownload>> {
+    let owner: Option<Uuid> =
+        sqlx::query_scalar("SELECT user_uuid FROM dev_voidvalueteam_tickets_tickets WHERE uuid=$1")
+            .bind(ticket_uuid)
+            .fetch_optional(state.database.read())
+            .await?;
+    let Some(owner) = owner else {
+        return Ok(None);
+    };
+    if matches!(scope, TicketScope::User(id) if id != owner) {
+        return Ok(None);
+    }
+    #[derive(sqlx::FromRow)]
+    struct Row {
+        original_filename: String,
+        mime_type: String,
+        content: Vec<u8>,
+        message_type: MessageType,
+    }
+    let row = sqlx::query_as::<_, Row>(
+        r#"SELECT a.original_filename,a.mime_type,a.content,m.message_type
+           FROM dev_voidvalueteam_tickets_attachments a
+           JOIN dev_voidvalueteam_tickets_messages m ON m.uuid=a.message_uuid
+           WHERE a.uuid=$1 AND m.ticket_uuid=$2 AND a.deleted_at IS NULL"#,
+    )
+    .bind(attachment_uuid)
+    .bind(ticket_uuid)
+    .fetch_optional(state.database.read())
+    .await?;
+    Ok(row.and_then(|row| {
+        if matches!(scope, TicketScope::User(_)) && row.message_type == MessageType::InternalNote {
+            None
+        } else {
+            Some(AttachmentDownload {
+                original_filename: row.original_filename,
+                mime_type: row.mime_type,
+                content: row.content,
+            })
+        }
+    }))
+}
+
+pub async fn delete_ticket(state: &State, ticket_uuid: Uuid) -> anyhow::Result<Option<String>> {
+    Ok(sqlx::query_scalar(
+        "DELETE FROM dev_voidvalueteam_tickets_tickets WHERE uuid=$1 RETURNING code",
+    )
+    .bind(ticket_uuid)
+    .fetch_optional(state.database.write())
+    .await?)
 }
 
 pub async fn reply(

@@ -64,7 +64,8 @@ async fn post(
             .with_status(axum::http::StatusCode::BAD_REQUEST)
             .ok();
     }
-    match repository::create_ticket(&state, user.uuid, data).await {
+    let can_access_all_servers = permissions.has_admin_permission("servers.read").is_ok();
+    match repository::create_ticket(&state, user.uuid, data, can_access_all_servers).await {
         Ok(ticket) => {
             logger.log("user:support-ticket.create",serde_json::json!({"ticket_uuid":ticket.ticket.uuid,"ticket_code":ticket.ticket.code,"server_uuid":ticket.ticket.server_uuid})).await;
             ApiResponse::new_serialized(TicketResponse { ticket }).ok()

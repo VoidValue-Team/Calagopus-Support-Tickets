@@ -41,7 +41,20 @@ export const messageSchema = z.object({
   createdAt: z.coerce.date(),
   editedAt: z.coerce.date().nullable(),
 });
-export const ticketDetailSchema = ticketSummarySchema.extend({ messages: z.array(messageSchema) });
+export const attachmentSchema = z.object({
+  uuid: z.string().uuid(),
+  messageUuid: z.string().uuid(),
+  uploaderUuid: z.string().uuid().nullable(),
+  originalFilename: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number(),
+  sha256: z.string().nullable(),
+  createdAt: z.coerce.date(),
+});
+export const ticketDetailSchema = ticketSummarySchema.extend({
+  messages: z.array(messageSchema),
+  attachments: z.array(attachmentSchema),
+});
 export const departmentSchema = z.object({
   uuid: z.string().uuid(),
   name: z.string(),
@@ -69,6 +82,7 @@ export const replyTicketSchema = z.object({
 export const updateTicketStatusSchema = z.object({ status: ticketStatusSchema });
 export type TicketSummary = z.infer<typeof ticketSummarySchema>;
 export type TicketDetail = z.infer<typeof ticketDetailSchema>;
+export type TicketAttachment = z.infer<typeof attachmentSchema>;
 export type Department = z.infer<typeof departmentSchema>;
 export type CreateTicket = z.infer<typeof createTicketSchema>;
 export type ReplyTicket = z.infer<typeof replyTicketSchema>;

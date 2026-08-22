@@ -27,6 +27,8 @@ pub fn register(builder: ExtensionPermissionsBuilder) -> ExtensionPermissionsBui
                     ("internal-note", "Create internal notes."),
                     ("assign", "Assign tickets."),
                     ("update-status", "Change ticket status."),
+                    ("attachments", "Upload and download ticket attachments."),
+                    ("delete", "Permanently delete support tickets."),
                     ("update-priority", "Change ticket priority."),
                     ("move-department", "Move tickets between departments."),
                     ("request-access", "Request temporary server access."),

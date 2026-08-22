@@ -24,6 +24,9 @@ const translations = defineTranslations({
       reopen: 'Reopen ticket',
       backToTickets: 'Back to tickets',
       search: 'Search tickets',
+      delete: 'Delete',
+      deleteTicket: 'Delete ticket',
+      deletePermanently: 'Delete permanently',
     },
     fields: {
       subject: 'Subject',
@@ -36,6 +39,10 @@ const translations = defineTranslations({
       serverDescription: 'Select a server only when the request is related to one.',
       noServer: 'Not related to a server',
       createdAt: 'Created',
+      assignedTo: 'Assigned agent',
+      unassigned: 'Unassigned',
+      attachments: 'Attachments',
+      attachmentsDescription: 'Up to 5 files of 10 MB: PNG, JPG, TXT, or PDF.',
     },
     columns: {
       code: 'Code',
@@ -57,6 +64,13 @@ const translations = defineTranslations({
       closed: 'Closed',
     },
     priorities: { low: 'Low', normal: 'Normal', high: 'High', urgent: 'Urgent' },
+    categories: { open: 'Open', closed: 'Closed', all: 'All' },
+    statistics: {
+      open: 'Open tickets',
+      awaitingStaff: 'Awaiting staff',
+      urgent: 'Urgent',
+      sla: 'SLA breached',
+    },
     sla: { breached: 'Breached', ok: 'OK' },
     messageTypes: {
       customer: 'Customer',
@@ -68,8 +82,18 @@ const translations = defineTranslations({
       ticketCreated: 'Ticket created.',
       replySent: 'Reply sent.',
       statusUpdated: 'Ticket status updated.',
+      ticketDeleted: 'Ticket permanently deleted.',
+      ticketCreatedWithoutAttachments: 'Ticket created, but its files could not be attached.',
+      replySentWithoutAttachments: 'Reply sent, but its files could not be attached.',
     },
-    errors: { ticketUnavailable: 'The ticket could not be loaded or is no longer available.' },
+    errors: {
+      ticketUnavailable: 'The ticket could not be loaded or is no longer available.',
+      createdMessageUnavailable: 'The message could not be identified for attachment upload.',
+    },
+    warnings: {
+      deleteTicket:
+        'Ticket {code}, its entire conversation, and its files will be permanently deleted. This cannot be undone.',
+    },
     empty: 'No support tickets found.',
     quickActions: {
       category: 'Support',
