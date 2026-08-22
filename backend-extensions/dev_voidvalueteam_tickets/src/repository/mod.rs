@@ -75,10 +75,9 @@ pub async fn create_ticket(
         }
     }
 
-    let number: i64 =
-        sqlx::query_scalar("SELECT nextval('dev_voidvalueteam_tickets_number_seq')")
-            .fetch_one(&mut *tx)
-            .await?;
+    let number: i64 = sqlx::query_scalar("SELECT nextval('dev_voidvalueteam_tickets_number_seq')")
+        .fetch_one(&mut *tx)
+        .await?;
     let settings = state.settings.get().await?;
     let ext: &crate::settings::ExtensionSettingsData = settings.find_extension_settings()?;
     let code = format!("{}-{number}", ext.ticket_prefix);
@@ -369,13 +368,11 @@ pub async fn assign(
     staff_uuid: Option<Uuid>,
 ) -> anyhow::Result<TicketDetail> {
     let mut tx = state.database.write().begin().await?;
-    sqlx::query(
-        "SELECT uuid FROM dev_voidvalueteam_tickets_tickets WHERE uuid=$1 FOR UPDATE",
-    )
-    .bind(ticket_uuid)
-    .fetch_optional(&mut *tx)
-    .await?
-    .ok_or_else(|| anyhow::anyhow!("ticket not found"))?;
+    sqlx::query("SELECT uuid FROM dev_voidvalueteam_tickets_tickets WHERE uuid=$1 FOR UPDATE")
+        .bind(ticket_uuid)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("ticket not found"))?;
     sqlx::query("UPDATE dev_voidvalueteam_tickets_assignments SET ended_at=now() WHERE ticket_uuid=$1 AND ended_at IS NULL").bind(ticket_uuid).execute(&mut *tx).await?;
     if let Some(staff) = staff_uuid {
         sqlx::query("INSERT INTO dev_voidvalueteam_tickets_assignments(uuid,ticket_uuid,staff_uuid,assigned_by_uuid) VALUES($1,$2,$3,$4)").bind(Uuid::new_v4()).bind(ticket_uuid).bind(staff).bind(actor_uuid).execute(&mut *tx).await?;
