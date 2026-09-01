@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0 - 2026-09-01
+
+- Valida el backend, el frontend y el paquete integrado contra Calagopus Panel 1.1.5.
+- Fija la CI al commit oficial de Calagopus 1.1.5 para que la comprobación sea reproducible.
+- Conserva compatibilidad con Calagopus 1.1.4 y acota la serie compatible antes de 2.0.0.
+- Publica la reestructuración actual del paquete `team.voidvalue.tickets` con una versión superior a las entregas anteriores.
+
 ## 1.0.0 - 2026-08-22
 
 - Añade traducciones completas en portugués, alemán y francés, además de inglés y español.

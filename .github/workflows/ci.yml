@@ -16,11 +16,11 @@ jobs:
         with:
           path: extension
 
-      - name: Checkout Calagopus 1.1.4 baseline
+      - name: Checkout Calagopus 1.1.5 baseline
         uses: actions/checkout@v4
         with:
           repository: calagopus/panel
-          ref: adc41d62ad40b0dc8afd5ffc089d1aa441dc0563
+          ref: 555b3c06de54f587c68a7154a0b31a163851f8b0
           path: panel
 
       - uses: dtolnay/rust-toolchain@master

@@ -2,11 +2,11 @@
 
 Extensión nativa de helpdesk para Calagopus Panel. Añade una cola global de soporte con tickets de cuenta y un servidor afectado opcional, conversación con notas internas, departamentos, asignación, estados, prioridades, SLA, respuestas guardadas, auditoría, configuración, tareas automáticas y accesos desde las áreas de cuenta y administración.
 
-El paquete se identifica como `team.voidvalue.tickets` y requiere **Calagopus Panel 1.1.4 o posterior**. Está diseñado para imágenes `heavy`, `nightly-heavy` o la variante AIO heavy equivalente. Incluye traducciones completas en inglés, español, portugués, alemán y francés.
+El paquete se identifica como `team.voidvalue.tickets` y requiere **Calagopus Panel 1.1.4 o posterior dentro de la serie 1.x**. Está diseñado para imágenes `heavy`, `nightly-heavy` o la variante AIO heavy equivalente. Incluye traducciones completas en inglés, español, portugués, alemán y francés.
 
 ## Estado de compatibilidad
 
-El código se valida contra el commit de Calagopus `adc41d62ad40b0dc8afd5ffc089d1aa441dc0563` (versión 1.1.4). La integración usa exclusivamente los registries, extractors, permisos, settings, plantillas de correo, tareas y rutas publicados por Calagopus.
+El código se valida contra el commit de Calagopus `555b3c06de54f587c68a7154a0b31a163851f8b0` (versión 1.1.5). La integración usa exclusivamente los registries, extractors, permisos, settings, plantillas de correo, tareas y rutas publicados por Calagopus.
 
 El acceso temporal a servidores usa el modelo nativo `ServerSubuser`, sincroniza Wings y restaura los permisos anteriores al revocar o caducar la concesión. Permanece desactivado por defecto y requiere habilitación explícita del administrador.
 
@@ -23,7 +23,7 @@ Las consultas de cliente se acotan siempre por `user_uuid` y las de administraci
 ## Instalación en Docker
 
 1. Descarga `dist/team_voidvalue_tickets.c7s.zip` desde este repositorio.
-2. Comprueba que el panel es 1.1.4+ y usa una imagen heavy.
+2. Comprueba que el panel está entre 1.1.4 y 1.x y usa una imagen heavy.
 3. En Administration → Extensions, carga el paquete y aplica la build desde la interfaz.
 4. Revisa los permisos nuevos antes de conceder acceso a usuarios o subusuarios.
 5. Configura el correo con los mecanismos nativos del panel; esta extensión no gestiona credenciales propias.
@@ -32,7 +32,7 @@ La instalación/rebuild puede recrear el contenedor del panel. Programa esa oper
 
 ## Desarrollo
 
-Necesitas Rust 1.97, pnpm y un checkout de `calagopus/panel` 1.1.4+.
+Necesitas Rust 1.97, pnpm y un checkout de `calagopus/panel` 1.1.5 para reproducir la validación actual.
 
 ```bash
 rsync -a backend-extensions/team_voidvalue_tickets/ \
